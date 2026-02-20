@@ -13,9 +13,9 @@ TagManager:
   - UI
   - Ground
   - Interactable
-  - 
-  - 
-  - 
+  - Tool
+  - Physics_Debris
+  - Static_Surface
   - 
   - 
   - 

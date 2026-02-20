@@ -36,6 +36,7 @@ public class ObjectPickup : MonoBehaviour
     private InteractableItem _currentCounterItem;
     private CounterSlot _currentCounterItemSlot;
     private Vector3 _heldObjectOriginalScale = Vector3.one;
+    private PillCountingStation _currentSortingStation;
 
     void Start()
     {
@@ -52,13 +53,19 @@ public class ObjectPickup : MonoBehaviour
         DetectPlaceable();
         DetectDeliveryStation();
         DetectCounterItem();
+        DetectSortingStation();
 
         if (Input.GetKeyDown(interactKey))
         {
             if (_heldObject == null)
             {
-                // Check for counter item first (delete on E press)
-                if (_currentCounterItem != null && _currentCounterItemSlot != null)
+                // Check for sorting station first (pill counting mini-game)
+                if (_currentSortingStation != null && !_currentSortingStation.IsActive)
+                {
+                    _currentSortingStation.Activate();
+                }
+                // Check for counter item (delete on E press)
+                else if (_currentCounterItem != null && _currentCounterItemSlot != null)
                 {
                     DeleteCounterItem();
                 }
@@ -390,6 +397,23 @@ public class ObjectPickup : MonoBehaviour
         // Clear references
         _currentCounterItem = null;
         _currentCounterItemSlot = null;
+    }
+
+
+    private void DetectSortingStation()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        PillCountingStation newStation = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newStation = hit.collider.GetComponent<PillCountingStation>();
+            if (newStation == null)
+                newStation = hit.collider.GetComponentInParent<PillCountingStation>();
+        }
+
+        _currentSortingStation = newStation;
     }
 
 
