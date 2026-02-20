@@ -68,11 +68,16 @@ public class PillScraper : MonoBehaviour
     private Vector3 _cornerBL, _cornerBR, _cornerTL, _cornerTR;
     private bool _cornersComputed;
 
+    // Desired position/rotation computed in Update, applied in FixedUpdate
+    private Vector3 _desiredPosition;
+    private Quaternion _desiredRotation;
+
     void Awake()
     {
         _rb = GetComponent<Rigidbody>();
         _rb.isKinematic = true;
         _rb.useGravity = false;
+        _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
     }
 
     void OnEnable()
@@ -90,6 +95,8 @@ public class PillScraper : MonoBehaviour
         // Keep the scraper at its current editor-placed position
         _lastPosition = transform.position;
         _targetXZ = transform.position;
+        _desiredPosition = transform.position;
+        _desiredRotation = transform.rotation;
 
         // Use parent position as tray center if available, otherwise own position
         if (_trayCenter == Vector3.zero)
@@ -119,6 +126,10 @@ public class PillScraper : MonoBehaviour
         if (ghostIndicator != null) ghostIndicator.SetActive(false);
     }
 
+    /// <summary>
+    /// Update computes the desired position and rotation from mouse input.
+    /// Actual movement is deferred to FixedUpdate for physics-correct collision.
+    /// </summary>
     void Update()
     {
         // Don't process any movement until focus mode is fully active
@@ -134,16 +145,29 @@ public class PillScraper : MonoBehaviour
             _currentY = 0f; // Start at current height (no offset)
             _lastPosition = transform.position;
             _targetXZ = transform.position;
+            _desiredPosition = transform.position;
+            _desiredRotation = transform.rotation;
             return; // Skip this frame so we don't jump
         }
 
-        HandleMovement();
+        ComputeTargetPosition();
         HandleVerticalState();
-        HandleTilt();
+        ComputeTilt();
         HandleGhost();
     }
 
-    private void HandleMovement()
+    /// <summary>
+    /// FixedUpdate applies movement via Rigidbody so Unity resolves collisions properly.
+    /// </summary>
+    void FixedUpdate()
+    {
+        if (!_ready) return;
+
+        _rb.MovePosition(_desiredPosition);
+        _rb.MoveRotation(_desiredRotation);
+    }
+
+    private void ComputeTargetPosition()
     {
         if (_camera == null) return;
 
@@ -181,18 +205,13 @@ public class PillScraper : MonoBehaviour
                 _targetXZ = ray.GetPoint(distance);
         }
 
-        // Follow the mouse target directly
+        // Compute the desired world position
         Vector3 targetPos = new Vector3(_targetXZ.x, _baseY + _currentY, _targetXZ.z);
-
-        // Smoothly move toward mouse target
-        Vector3 newPos = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
+        _desiredPosition = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
 
         // Track velocity for tilt
-        _velocity = (newPos - _lastPosition) / Mathf.Max(Time.deltaTime, 0.001f);
-        _lastPosition = newPos;
-
-        // Move scraper directly (not via Rigidbody, which delays until FixedUpdate)
-        transform.position = newPos;
+        _velocity = (_desiredPosition - _lastPosition) / Mathf.Max(Time.deltaTime, 0.001f);
+        _lastPosition = _desiredPosition;
     }
 
     /// <summary>
@@ -243,7 +262,7 @@ public class PillScraper : MonoBehaviour
         }
     }
 
-    private void HandleTilt()
+    private void ComputeTilt()
     {
         // Tilt based on horizontal velocity
         _targetTilt = Quaternion.Euler(
@@ -252,7 +271,7 @@ public class PillScraper : MonoBehaviour
             -_velocity.x * tiltAmount * 0.01f
         );
 
-        transform.rotation = Quaternion.Slerp(transform.rotation, _targetTilt, Time.deltaTime * tiltSmoothSpeed);
+        _desiredRotation = Quaternion.Slerp(transform.rotation, _targetTilt, Time.deltaTime * tiltSmoothSpeed);
     }
 
     private void HandleGhost()
