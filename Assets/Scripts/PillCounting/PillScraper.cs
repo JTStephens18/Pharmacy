@@ -49,7 +49,6 @@ public class PillScraper : MonoBehaviour
     private Camera _camera;
     private Plane _trayPlane;
     private float _currentY;
-    private int _debugFrameCount;
     private float _yVelocity;
     private Vector3 _lastPosition;
     private Vector3 _velocity;
@@ -57,7 +56,6 @@ public class PillScraper : MonoBehaviour
     private bool _isContact;
     private bool _ready;
     private float _baseY;
-    private float _nextDebugTime;
 
     // Reference point: tray center in world space (set by station on activation)
     private Vector3 _trayCenter;
@@ -80,10 +78,8 @@ public class PillScraper : MonoBehaviour
         _currentY = hoverHeight;
         _yVelocity = 0f;
         _isContact = false;
-        _debugFrameCount = 0;
         _ready = false;
         _cornersComputed = false;
-        _nextDebugTime = 0f;
 
         // Keep the scraper at its current editor-placed position
         _lastPosition = transform.position;
@@ -104,9 +100,6 @@ public class PillScraper : MonoBehaviour
         Physics.IgnoreLayerCollision(toolLayerIndex, debrisLayerIndex, true);
 
         if (ghostIndicator != null) ghostIndicator.SetActive(true);
-
-        Debug.Log($"[PillScraper] OnEnable - Camera: {(_camera != null ? _camera.name : "NULL")} " +
-            $"| TrayCenter: {_trayCenter} | ScraperPos: {transform.position} | GO active: {gameObject.activeInHierarchy}");
     }
 
     void OnDisable()
@@ -131,13 +124,8 @@ public class PillScraper : MonoBehaviour
             _currentY = 0f; // Start at current height (no offset)
             _lastPosition = transform.position;
             _targetXZ = transform.position;
-            Debug.Log($"[PillScraper] Ready! BaseY: {_baseY} | Pos: {transform.position}" +
-                $" | CamPos: {(_camera != null ? _camera.transform.position.ToString() : "NULL")}" +
-                $" | CamRot: {(_camera != null ? _camera.transform.eulerAngles.ToString() : "NULL")}");
             return; // Skip this frame so we don't jump
         }
-
-        _debugFrameCount++;
 
         HandleMovement();
         HandleVerticalState();
@@ -147,17 +135,11 @@ public class PillScraper : MonoBehaviour
 
     private void HandleMovement()
     {
-        if (_camera == null)
-        {
-            Debug.LogWarning("[PillScraper] HandleMovement: _camera is NULL, cannot move!");
-            return;
-        }
+        if (_camera == null) return;
 
         // Compute reference corners once (raycasts from screen-fraction positions onto tray plane)
         if (!_cornersComputed)
             ComputeScreenCorners();
-
-        bool shouldLog = Time.time >= _nextDebugTime;
 
         if (_cornersComputed)
         {
@@ -173,30 +155,12 @@ public class PillScraper : MonoBehaviour
             Vector3 top = Vector3.Lerp(_cornerTL, _cornerTR, tX);
             _targetXZ = Vector3.Lerp(bottom, top, tY);
 
-            if (shouldLog)
-            {
-                Debug.Log($"[PillScraper] Mouse: {Input.mousePosition} | Screen: {Screen.width}x{Screen.height}" +
-                    $" | NormXY: ({normX:F3}, {normY:F3}) | tXY: ({tX:F3}, {tY:F3})" +
-                    $" | TargetXZ (pre-clamp): {_targetXZ}");
-            }
-
             // Safety clamp to bounding box
             if (trayBoundsCollider != null)
             {
                 Bounds b = trayBoundsCollider.bounds;
-                Vector3 preClamped = _targetXZ;
                 _targetXZ.x = Mathf.Clamp(_targetXZ.x, b.min.x, b.max.x);
                 _targetXZ.z = Mathf.Clamp(_targetXZ.z, b.min.z, b.max.z);
-
-                if (shouldLog)
-                {
-                    Debug.Log($"[PillScraper] Bounds min: {b.min} max: {b.max}" +
-                        $" | Clamped: {preClamped != _targetXZ} | TargetXZ (post-clamp): {_targetXZ}");
-                }
-            }
-            else if (shouldLog)
-            {
-                Debug.LogWarning("[PillScraper] trayBoundsCollider is NULL, no clamping applied!");
             }
         }
         else
@@ -205,9 +169,6 @@ public class PillScraper : MonoBehaviour
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (_trayPlane.Raycast(ray, out float distance))
                 _targetXZ = ray.GetPoint(distance);
-
-            if (shouldLog)
-                Debug.LogWarning($"[PillScraper] Using FALLBACK raycast! TargetXZ: {_targetXZ}");
         }
 
         // Follow the mouse target directly
@@ -215,13 +176,6 @@ public class PillScraper : MonoBehaviour
 
         // Smoothly move toward mouse target
         Vector3 newPos = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
-
-        if (shouldLog)
-        {
-            Debug.Log($"[PillScraper] ScraperPos: {transform.position} | TargetPos: {targetPos}" +
-                $" | NewPos: {newPos} | BaseY: {_baseY} | CurrentY: {_currentY}");
-            _nextDebugTime = Time.time + 0.5f;
-        }
 
         // Track velocity for tilt
         _velocity = (newPos - _lastPosition) / Mathf.Max(Time.deltaTime, 0.001f);
@@ -243,7 +197,6 @@ public class PillScraper : MonoBehaviour
         {
             float planeY = trayBoundsCollider.bounds.center.y;
             _trayPlane = new Plane(Vector3.up, new Vector3(0f, planeY, 0f));
-            Debug.Log($"[PillScraper] Corrected tray plane to Y={planeY} (from bounds collider)");
         }
 
         _cornerBL = ScreenFractionToTray(screenLeftFraction, screenBottomFraction);
@@ -251,9 +204,6 @@ public class PillScraper : MonoBehaviour
         _cornerTL = ScreenFractionToTray(screenLeftFraction, screenTopFraction);
         _cornerTR = ScreenFractionToTray(screenRightFraction, screenTopFraction);
         _cornersComputed = true;
-
-        Debug.Log($"[PillScraper] Screen corners computed: BL={_cornerBL} BR={_cornerBR} TL={_cornerTL} TR={_cornerTR}" +
-            $" | Bounds: {(trayBoundsCollider != null ? $"min={trayBoundsCollider.bounds.min} max={trayBoundsCollider.bounds.max}" : "NONE")}");
     }
 
     private Vector3 ScreenFractionToTray(float fracX, float fracY)
