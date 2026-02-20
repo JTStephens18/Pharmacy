@@ -105,12 +105,12 @@ public class PillCountingStation : MonoBehaviour
 
     /// <summary>
     /// Called when the target pill count is reached.
+    /// Auto-exits after a short delay so the player can see the completion state.
     /// </summary>
     private void OnTargetReached()
     {
         Debug.Log("[PillCountingStation] Mini-game complete!");
-        // The UI handles showing completion state.
-        // Player can press Escape to exit, or we could auto-exit after a delay.
+        Invoke(nameof(Deactivate), 1.5f);
     }
 
     /// <summary>
