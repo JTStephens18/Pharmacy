@@ -56,6 +56,8 @@ public class PillScraper : MonoBehaviour
     private bool _isContact;
     private bool _ready;
     private float _baseY;
+    private Vector3 _startPosition;
+    private Quaternion _startRotation;
 
     // Reference point: tray center in world space (set by station on activation)
     private Vector3 _trayCenter;
@@ -81,6 +83,10 @@ public class PillScraper : MonoBehaviour
         _ready = false;
         _cornersComputed = false;
 
+        // Save default position to restore on exit
+        _startPosition = transform.position;
+        _startRotation = transform.rotation;
+
         // Keep the scraper at its current editor-placed position
         _lastPosition = transform.position;
         _targetXZ = transform.position;
@@ -104,6 +110,10 @@ public class PillScraper : MonoBehaviour
 
     void OnDisable()
     {
+        // Restore scraper to its default position
+        transform.position = _startPosition;
+        transform.rotation = _startRotation;
+
         // Restore collision state
         Physics.IgnoreLayerCollision(toolLayerIndex, debrisLayerIndex, true);
         if (ghostIndicator != null) ghostIndicator.SetActive(false);
