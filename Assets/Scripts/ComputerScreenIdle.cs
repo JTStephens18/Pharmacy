@@ -60,7 +60,7 @@ public class ComputerScreenIdle : MonoBehaviour
         Text txt = label.GetComponent<Text>();
         txt.text = "PharmOS";
         txt.color = textColor;
-        txt.fontSize = 22;
+        txt.fontSize = 96;
         txt.alignment = TextAnchor.MiddleCenter;
         txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
     }

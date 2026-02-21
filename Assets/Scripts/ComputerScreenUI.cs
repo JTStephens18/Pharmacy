@@ -82,7 +82,7 @@ public class ComputerScreenUI : MonoBehaviour
 
         // Image label
         CreateLabel("ImageLabel", imageRect, "[ Image Preview ]",
-            TextAnchor.MiddleCenter, 18);
+            TextAnchor.MiddleCenter, 72);
 
         // --- Button row at bottom ---
         GameObject buttonRow = CreatePanel("ButtonRow", bgRect, Color.clear);
@@ -127,7 +127,7 @@ public class ComputerScreenUI : MonoBehaviour
         colors.highlightedColor = activeTabColor;
         btn.colors = colors;
 
-        CreateLabel("Label", tabRect, label, TextAnchor.MiddleCenter, 12);
+        CreateLabel("Label", tabRect, label, TextAnchor.MiddleCenter, 48);
     }
 
     private void CreateButton(RectTransform parent, string label)
@@ -154,7 +154,7 @@ public class ComputerScreenUI : MonoBehaviour
             Debug.Log($"[ComputerScreenUI] Button clicked: {capturedLabel}");
         });
 
-        CreateLabel("Label", btnRect, label, TextAnchor.MiddleCenter, 14);
+        CreateLabel("Label", btnRect, label, TextAnchor.MiddleCenter, 56);
     }
 
     private void CreateLabel(string name, RectTransform parent, string text,
