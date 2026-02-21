@@ -37,6 +37,7 @@ public class ObjectPickup : MonoBehaviour
     private CounterSlot _currentCounterItemSlot;
     private Vector3 _heldObjectOriginalScale = Vector3.one;
     private PillCountingStation _currentSortingStation;
+    private ComputerScreen _currentComputerScreen;
 
     void Start()
     {
@@ -54,13 +55,19 @@ public class ObjectPickup : MonoBehaviour
         DetectDeliveryStation();
         DetectCounterItem();
         DetectSortingStation();
+        DetectComputerScreen();
 
         if (Input.GetKeyDown(interactKey))
         {
             if (_heldObject == null)
             {
-                // Check for sorting station first (pill counting mini-game)
-                if (_currentSortingStation != null && !_currentSortingStation.IsActive)
+                // Check for computer screen (interactable monitor)
+                if (_currentComputerScreen != null && !_currentComputerScreen.IsActive)
+                {
+                    _currentComputerScreen.Activate();
+                }
+                // Check for sorting station (pill counting mini-game)
+                else if (_currentSortingStation != null && !_currentSortingStation.IsActive)
                 {
                     _currentSortingStation.Activate();
                 }
@@ -414,6 +421,22 @@ public class ObjectPickup : MonoBehaviour
         }
 
         _currentSortingStation = newStation;
+    }
+
+    private void DetectComputerScreen()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        ComputerScreen newScreen = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newScreen = hit.collider.GetComponent<ComputerScreen>();
+            if (newScreen == null)
+                newScreen = hit.collider.GetComponentInParent<ComputerScreen>();
+        }
+
+        _currentComputerScreen = newScreen;
     }
 
 
