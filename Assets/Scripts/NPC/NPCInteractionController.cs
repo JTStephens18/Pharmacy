@@ -82,8 +82,11 @@ public class NPCInteractionController : MonoBehaviour
     public event System.Action OnPlaceStart;
 
     // States for the interaction flow
-    private enum NPCState { Idle, MovingToItem, WaitingAtItem, PickingUp, MovingToCounter, PlacingItem, WaitingForCheckout, MovingToExit }
+    public enum NPCState { Idle, MovingToItem, WaitingAtItem, PickingUp, MovingToCounter, PlacingItem, WaitingForCheckout, MovingToExit }
     private NPCState _currentState = NPCState.Idle;
+
+    /// <summary>The NPC's current state (read-only).</summary>
+    public NPCState CurrentNPCState => _currentState;
 
     /// <summary>
     /// Helper method for conditional debug logging.

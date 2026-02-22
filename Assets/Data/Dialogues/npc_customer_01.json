@@ -1,0 +1,86 @@
+{
+    "dialogueId": "npc_customer_01",
+    "speakerName": "Customer",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Excuse me, could you help me find some cold medicine?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Sure! It's in aisle 3, on the left side.",
+                    "nextNodeId": "helpful"
+                },
+                {
+                    "text": "Check the shelves over there.",
+                    "nextNodeId": "dismissive"
+                },
+                {
+                    "text": "We're out of stock right now, sorry.",
+                    "nextNodeId": "out_of_stock"
+                }
+            ]
+        },
+        {
+            "id": "helpful",
+            "text": "Thank you so much! You've been really helpful. Do you have any recommendations?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'd recommend the nighttime formula.",
+                    "nextNodeId": "recommendation"
+                },
+                {
+                    "text": "They're all pretty similar, just pick one!",
+                    "nextNodeId": "end_neutral"
+                }
+            ]
+        },
+        {
+            "id": "dismissive",
+            "text": "Oh... okay. I'll look around I guess.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "out_of_stock",
+            "text": "That's a shame. Do you know when you'll get more in?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "We should have a new shipment tomorrow.",
+                    "nextNodeId": "end_hopeful"
+                },
+                {
+                    "text": "I'm not sure, sorry.",
+                    "nextNodeId": "end_uncertain"
+                }
+            ]
+        },
+        {
+            "id": "recommendation",
+            "text": "Great, I'll grab that one. Thanks for the help!",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_neutral",
+            "text": "Alright, I'll just pick one then. Thanks!",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_hopeful",
+            "text": "Okay, I'll come back tomorrow then. Thanks!",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_uncertain",
+            "text": "No worries. I'll check back later.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -50,12 +50,22 @@ Assets/Scripts/
 │   ├── PillCountingChute.cs   # Trigger zone that counts pills
 │   └── PillCountUI.cs         # World-space count display
 │
-└── Shelf/
-    ├── ShelfSection.cs        # IPlaceable shelf with multiple slots
-    ├── ShelfSlot.cs           # Individual slot with multi-item support
-    ├── InventoryBox.cs        # Portable item container (decrements + shrinks)
-    ├── BoxItemPreview.cs      # Visual preview of next items inside box
-    └── ItemPlacementManager.cs# Box-to-shelf placement workflow + ghost previews
+├── Shelf/
+│   ├── ShelfSection.cs        # IPlaceable shelf with multiple slots
+│   ├── ShelfSlot.cs           # Individual slot with multi-item support
+│   ├── InventoryBox.cs        # Portable item container (decrements + shrinks)
+│   ├── BoxItemPreview.cs      # Visual preview of next items inside box
+│   └── ItemPlacementManager.cs# Box-to-shelf placement workflow + ghost previews
+│
+└── Dialogue/
+    ├── DialogueData.cs        # Data classes + JSON loader
+    ├── DialogueManager.cs     # Singleton: dialogue UI overlay controller
+    ├── DialogueHistory.cs     # Conversation history log (ENTER to toggle)
+    ├── NPCDialogueTrigger.cs  # Per-NPC: auto-triggers dialogue at counter
+    └── ComputerDialogueButton.cs # Computer UI button to restart conversations
+
+Assets/Data/Dialogues/
+└── npc_customer_01.json       # Sample branching dialogue
 ```
 
 ---
@@ -415,10 +425,14 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
      │         └──→ InventoryBox                      │
      │                                                │
      ├──→ CounterSlot ←── NPCInteractionController ──┘
-     │                           │
-     └──→ CashRegister ─────────┘
-                                 │
-              NPCAnimationController (subscribes to NPC events)
+     │                           │         │
+     └──→ CashRegister ─────────┘         │
+                                 │         ├──→ NPCDialogueTrigger ──→ DialogueManager
+              NPCAnimationController       │                              ↑
+                                           └──→ ComputerDialogueButton ──┘
+                                                    (on computer screen)
+
+DialogueManager ──→ DialogueHistory (records exchanges)
 ```
 
 ### Key interaction chains:
@@ -430,6 +444,8 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
 3. **Pill Counting**: `ObjectPickup` detects `PillCountingStation` → `Activate()` → `FocusStateManager.EnterFocus()` → `PillSpawner.SpawnPills()` → player uses `PillScraper` → pills enter `PillCountingChute` → count reaches target → auto-exit
 
 4. **Computer Screen**: `ObjectPickup` detects `ComputerScreen` → `Activate()` → `FocusStateManager.EnterFocus()` → `ComputerScreenController.ResetToMain()` → player clicks tabs/buttons on World Space Canvas → Escape exits
+
+5. **NPC Dialogue**: NPC enters `WaitingForCheckout` → `NPCDialogueTrigger` detects player nearby → `DialogueManager.StartDialogue()` → player clicks response buttons → dialogue navigates nodes → terminal node → auto-closes. Player can use computer screen `ComputerDialogueButton` to start new conversations → `CashRegister` checkout remains separate
 
 ---
 
@@ -494,12 +510,72 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
 
 ---
 
+## System 10: NPC Dialogue
+
+### DialogueData.cs + DialogueLoader
+Data classes matching the JSON dialogue format. `DialogueLoader.Load(TextAsset)` parses JSON and builds a `Dictionary<string, DialogueNode>` for O(1) lookups.
+
+**JSON format**: See `Assets/Data/Dialogues/npc_customer_01.json` for the structure. Flat array of nodes, each with `id`, `text`, `speakerName` (optional override), and `responses[]`. Empty responses = terminal node.
+
+### DialogueManager.cs (Singleton)
+Attach to a persistent GameObject with a **Screen Space Overlay Canvas**.
+
+| Feature | Details |
+|---|---|
+| Start dialogue | `StartDialogue(TextAsset)` or `StartDialogue(DialogueData, Dictionary)` |
+| Response buttons | Spawned dynamically from a prefab; auto-cleared between nodes |
+| Terminal nodes | Shows "[Continue]" button → closes overlay |
+| Cursor | Unlocks during dialogue, relocks on close |
+| Events | `OnDialogueStarted`, `OnDialogueEnded` |
+
+**Editor setup**: Assign `dialoguePanel`, `speakerNameText` (TMP), `dialogueBodyText` (TMP), `responseContainer` (Transform), `responseButtonPrefab` (Button + TMP child).
+
+### DialogueHistory.cs
+Attach alongside `DialogueManager`. Records all exchanges with color-coded speaker labels.
+
+| Feature | Details |
+|---|---|
+| Toggle | ENTER key shows/hides scrollable history panel |
+| Formatting | Speaker names in gold, player responses in light blue (configurable) |
+| Limit | Max 200 lines (configurable) |
+
+**Editor setup**: Assign `historyPanel`, `historyText` (TMP), `historyScrollRect`.
+
+### NPCDialogueTrigger.cs
+Attach to NPC alongside `NPCInteractionController`.
+
+| Feature | Details |
+|---|---|
+| Auto-trigger | First dialogue starts when NPC enters `WaitingForCheckout` + player within `playerRange` + line of sight |
+| Repeat conversations | `StartNewConversation()` — called by computer screen button; cycles through `dialogueFiles[]` |
+| State check | `IsAvailableForDialogue()` — used by `ComputerDialogueButton` |
+
+**Editor setup**: Assign `dialogueFiles[]` (TextAsset array), set `playerRange`, `lineOfSightMask`.
+
+### ComputerDialogueButton.cs
+Attach to a Button on the computer screen UI.
+
+Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + updates text. On click, calls `NPCDialogueTrigger.StartNewConversation()`.
+
+**Editor setup**: Just add to a Button in a computer screen view. Optionally assign a `CanvasGroup` for fade effect.
+
+### Dialogue Editor Setup Checklist
+- [ ] Create a persistent GameObject with `DialogueManager` + `DialogueHistory`
+- [ ] Add a Screen Space Overlay Canvas under it with dialogue panel, speaker text, body text, response container
+- [ ] Create a response button prefab (Button + TextMeshProUGUI child)
+- [ ] Add a history panel with ScrollRect + TextMeshProUGUI
+- [ ] On each NPC: add `NPCDialogueTrigger`, assign dialogue JSON files
+- [ ] On computer screen: add a "Talk to Customer" Button with `ComputerDialogueButton` component
+
+---
+
 ## Key Singletons
 
 | Singleton | Access | Purpose |
 |---|---|---|
 | `FocusStateManager.Instance` | Static | Camera transitions, FPS control toggling |
 | `MouseLook.Instance` | Static | Screen shake, sensitivity adjustment |
+| `DialogueManager.Instance` | Static | Dialogue UI overlay, response handling |
 
 ---
 
