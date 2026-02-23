@@ -193,7 +193,7 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (_loadedData == null || _loadedLookup == null) return;
 
         _dialogueInProgress = true;
-        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup);
+        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform);
 
         DebugLog($"[NPCDialogueTrigger] Started dialogue '{_loadedData.dialogueId}' (file index {index})");
     }

@@ -171,4 +171,16 @@ public class MouseLook : MonoBehaviour
         accelerationMultiplier = multiplier;
         accelerationThreshold = threshold;
     }
+
+    /// <summary>
+    /// Sync internal pitch after external code has rotated the camera (e.g. dialogue look-at lerp).
+    /// Call this before re-enabling MouseLook to prevent camera snap.
+    /// </summary>
+    public void SetCurrentPitch(float pitch)
+    {
+        _xRotation = pitch;
+    }
+
+    /// <summary>The player body transform (horizontal rotation).</summary>
+    public Transform PlayerBody => playerBody;
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Singleton that drives the on-screen dialogue overlay.
 /// Shows NPC dialogue text and spawns clickable response buttons.
-/// Does NOT disable player movement — acts as a HUD overlay.
+/// Smoothly lerps the camera to face the NPC when dialogue starts.
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
@@ -33,6 +34,13 @@ public class DialogueManager : MonoBehaviour
     [Tooltip("Text shown on the close button when dialogue has no more responses.")]
     [SerializeField] private string closeButtonText = "[Continue]";
 
+    [Header("Camera Look-At")]
+    [Tooltip("Duration of the camera lerp to face the NPC (seconds).")]
+    [SerializeField] private float cameraLerpDuration = 0.5f;
+
+    [Tooltip("Vertical offset from NPC pivot to aim at (roughly head height).")]
+    [SerializeField] private float npcHeadOffset = 1.5f;
+
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip dialogueOpenSound;
@@ -51,6 +59,8 @@ public class DialogueManager : MonoBehaviour
     private DialogueNode _currentNode;
     private bool _isActive;
     private List<GameObject> _spawnedButtons = new List<GameObject>();
+    private Transform _lookAtTarget;
+    private Coroutine _cameraLerpCoroutine;
 
     /// <summary>Whether a dialogue is currently being displayed.</summary>
     public bool IsActive => _isActive;
@@ -81,7 +91,7 @@ public class DialogueManager : MonoBehaviour
     /// <summary>
     /// Start a dialogue conversation from a TextAsset JSON file.
     /// </summary>
-    public void StartDialogue(TextAsset jsonAsset)
+    public void StartDialogue(TextAsset jsonAsset, Transform npcTransform = null)
     {
         if (jsonAsset == null)
         {
@@ -92,13 +102,14 @@ public class DialogueManager : MonoBehaviour
         DialogueData data = DialogueLoader.Load(jsonAsset, out Dictionary<string, DialogueNode> lookup);
         if (data == null || lookup == null) return;
 
-        StartDialogue(data, lookup);
+        StartDialogue(data, lookup, npcTransform);
     }
 
     /// <summary>
     /// Start a dialogue conversation from pre-loaded data.
+    /// Optionally pass the NPC transform to smoothly look at them.
     /// </summary>
-    public void StartDialogue(DialogueData data, Dictionary<string, DialogueNode> nodeLookup)
+    public void StartDialogue(DialogueData data, Dictionary<string, DialogueNode> nodeLookup, Transform npcTransform = null)
     {
         if (_isActive)
         {
@@ -114,6 +125,7 @@ public class DialogueManager : MonoBehaviour
 
         _currentDialogue = data;
         _nodeLookup = nodeLookup;
+        _lookAtTarget = npcTransform;
         _isActive = true;
 
         Debug.Log($"[DialogueManager] Starting dialogue '{data.dialogueId}' with {nodeLookup.Count} nodes.");
@@ -125,6 +137,18 @@ public class DialogueManager : MonoBehaviour
         // Unlock cursor for button clicking
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.visible = true;
+
+        // Disable camera look so mouse doesn't move the camera during dialogue
+        if (MouseLook.Instance != null)
+            MouseLook.Instance.enabled = false;
+
+        // Smoothly look at NPC
+        if (_lookAtTarget != null && MouseLook.Instance != null)
+        {
+            if (_cameraLerpCoroutine != null)
+                StopCoroutine(_cameraLerpCoroutine);
+            _cameraLerpCoroutine = StartCoroutine(LerpCameraToTarget());
+        }
 
         // Play sound
         if (audioSource != null && dialogueOpenSound != null)
@@ -155,6 +179,14 @@ public class DialogueManager : MonoBehaviour
         _currentDialogue = null;
         _nodeLookup = null;
         _currentNode = null;
+        _lookAtTarget = null;
+
+        // Stop camera lerp if still running
+        if (_cameraLerpCoroutine != null)
+        {
+            StopCoroutine(_cameraLerpCoroutine);
+            _cameraLerpCoroutine = null;
+        }
 
         // Hide panel
         if (dialoguePanel != null)
@@ -167,9 +199,76 @@ public class DialogueManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        // Sync MouseLook pitch to current camera angle and re-enable
+        if (MouseLook.Instance != null)
+        {
+            MouseLook.Instance.SetCurrentPitch(MouseLook.Instance.transform.localEulerAngles.x);
+            // Normalize pitch from 0-360 to -180-180 range
+            float pitch = MouseLook.Instance.transform.localEulerAngles.x;
+            if (pitch > 180f) pitch -= 360f;
+            MouseLook.Instance.SetCurrentPitch(pitch);
+            MouseLook.Instance.enabled = true;
+        }
+
         Debug.Log("[DialogueManager] Dialogue ended.");
 
         OnDialogueEnded?.Invoke();
+    }
+
+    // ── Camera Lerp ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Smoothly rotates the camera (pitch) and player body (yaw) to face the NPC.
+    /// </summary>
+    private IEnumerator LerpCameraToTarget()
+    {
+        MouseLook ml = MouseLook.Instance;
+        Transform cam = ml.transform;
+        Transform body = ml.PlayerBody;
+
+        if (cam == null || body == null || _lookAtTarget == null)
+            yield break;
+
+        // Target position: NPC head height
+        Vector3 targetPos = _lookAtTarget.position + Vector3.up * npcHeadOffset;
+
+        // Starting rotations
+        Quaternion startBodyRot = body.rotation;
+        float startPitch = cam.localEulerAngles.x;
+        if (startPitch > 180f) startPitch -= 360f;
+
+        float elapsed = 0f;
+
+        while (elapsed < cameraLerpDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / cameraLerpDuration);
+
+            // Recalculate target direction each frame (NPC might be animating)
+            Vector3 dirToNPC = targetPos - cam.position;
+
+            // Yaw: horizontal rotation on player body
+            float targetYaw = Mathf.Atan2(dirToNPC.x, dirToNPC.z) * Mathf.Rad2Deg;
+            Quaternion targetBodyRot = Quaternion.Euler(0f, targetYaw, 0f);
+            body.rotation = Quaternion.Slerp(startBodyRot, targetBodyRot, t);
+
+            // Pitch: vertical rotation on camera
+            float targetPitch = -Mathf.Asin(dirToNPC.normalized.y) * Mathf.Rad2Deg;
+            float currentPitch = Mathf.Lerp(startPitch, targetPitch, t);
+            cam.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
+
+            yield return null;
+        }
+
+        // Final snap
+        Vector3 finalDir = targetPos - cam.position;
+        float finalYaw = Mathf.Atan2(finalDir.x, finalDir.z) * Mathf.Rad2Deg;
+        body.rotation = Quaternion.Euler(0f, finalYaw, 0f);
+
+        float finalPitch = -Mathf.Asin(finalDir.normalized.y) * Mathf.Rad2Deg;
+        cam.localRotation = Quaternion.Euler(finalPitch, 0f, 0f);
+
+        _cameraLerpCoroutine = null;
     }
 
     // ── Private Helpers ─────────────────────────────────────────────
