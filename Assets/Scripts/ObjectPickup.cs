@@ -38,6 +38,7 @@ public class ObjectPickup : MonoBehaviour
     private Vector3 _heldObjectOriginalScale = Vector3.one;
     private PillCountingStation _currentSortingStation;
     private ComputerScreen _currentComputerScreen;
+    private CashRegister _currentCashRegister;
 
     void Start()
     {
@@ -56,6 +57,7 @@ public class ObjectPickup : MonoBehaviour
         DetectCounterItem();
         DetectSortingStation();
         DetectComputerScreen();
+        DetectCashRegister();
 
         if (Input.GetKeyDown(interactKey))
         {
@@ -75,6 +77,11 @@ public class ObjectPickup : MonoBehaviour
                 else if (_currentCounterItem != null && _currentCounterItemSlot != null)
                 {
                     DeleteCounterItem();
+                }
+                // Check for cash register (checkout)
+                else if (_currentCashRegister != null)
+                {
+                    _currentCashRegister.ProcessCheckout();
                 }
                 // Check for delivery station
                 else if (_currentDeliveryStation != null)
@@ -437,6 +444,22 @@ public class ObjectPickup : MonoBehaviour
         }
 
         _currentComputerScreen = newScreen;
+    }
+
+    private void DetectCashRegister()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        CashRegister newRegister = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newRegister = hit.collider.GetComponent<CashRegister>();
+            if (newRegister == null)
+                newRegister = hit.collider.GetComponentInParent<CashRegister>();
+        }
+
+        _currentCashRegister = newRegister;
     }
 
 
