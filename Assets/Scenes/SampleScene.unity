@@ -6122,7 +6122,7 @@ MonoBehaviour:
   responseButtonPrefab: {fileID: 1381509159517595059, guid: afd01683453350b49a9e673f709b94d5, type: 3}
   closeButtonText: '[Continue]'
   cameraLerpDuration: 0.5
-  npcHeadOffset: 1.5
+  npcHeadOffset: 1
   audioSource: {fileID: 0}
   dialogueOpenSound: {fileID: 0}
   responseClickSound: {fileID: 0}

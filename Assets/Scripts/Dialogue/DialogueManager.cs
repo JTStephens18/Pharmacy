@@ -138,9 +138,13 @@ public class DialogueManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.visible = true;
 
-        // Disable camera look so mouse doesn't move the camera during dialogue
+        // Disable camera look and player movement during dialogue
         if (MouseLook.Instance != null)
             MouseLook.Instance.enabled = false;
+
+        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
+        if (playerMovement != null)
+            playerMovement.enabled = false;
 
         // Smoothly look at NPC
         if (_lookAtTarget != null && MouseLook.Instance != null)
@@ -202,13 +206,17 @@ public class DialogueManager : MonoBehaviour
         // Sync MouseLook pitch to current camera angle and re-enable
         if (MouseLook.Instance != null)
         {
-            MouseLook.Instance.SetCurrentPitch(MouseLook.Instance.transform.localEulerAngles.x);
             // Normalize pitch from 0-360 to -180-180 range
             float pitch = MouseLook.Instance.transform.localEulerAngles.x;
             if (pitch > 180f) pitch -= 360f;
             MouseLook.Instance.SetCurrentPitch(pitch);
             MouseLook.Instance.enabled = true;
         }
+
+        // Re-enable player movement
+        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
+        if (playerMovement != null)
+            playerMovement.enabled = true;
 
         Debug.Log("[DialogueManager] Dialogue ended.");
 

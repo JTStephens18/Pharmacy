@@ -124,6 +124,10 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (_npcController == null || _playerTransform == null) return false;
         if (dialogueFiles == null || dialogueFiles.Length == 0) return false;
 
+        // Don't trigger if player is in a focused mode (computer, pill station, etc.)
+        if (FocusStateManager.Instance != null && (FocusStateManager.Instance.IsFocused || FocusStateManager.Instance.IsTransitioning))
+            return false;
+
         // Check NPC state
         if (_npcController.GetCurrentState() != "WaitingForCheckout")
             return false;
