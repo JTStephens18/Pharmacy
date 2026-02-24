@@ -27,9 +27,12 @@ Assets/Scripts/
 ├── CashRegister.cs            # Checkout trigger
 ├── ComputerScreen.cs          # Computer focus + UI activation
 ├── ComputerScreenController.cs# View/tab manager for computer UI
+├── NPCInfoDisplay.cs          # Singleton: populates computer UI with scanned NPC data
 │
 ├── Counter/
-│   └── CounterSlot.cs         # NPC item placement + player "bagging"
+│   ├── CounterSlot.cs         # NPC item placement + player "bagging"
+│   ├── IDCardSlot.cs          # Counter spot for NPC ID card
+│   └── IDCardInteraction.cs   # Focus mode + barcode scanning on ID card
 │
 ├── Delivery/
 │   └── DeliveryStation.cs     # Spawns InventoryBox prefabs
@@ -39,6 +42,7 @@ Assets/Scripts/
 │   ├── IPlaceable.cs          # Interface: player-placeable targets
 │   ├── InteractableItem.cs    # Shelf item that NPCs pick up
 │   ├── ItemCategory.cs        # ScriptableObject: item type + prefab
+│   ├── NPCIdentity.cs         # ScriptableObject: NPC personal data for ID card
 │   ├── NPCInteractionController.cs  # NPC state machine (13 states)
 │   └── NPCAnimationController.cs    # Drives Animator from NPC state
 │
@@ -410,12 +414,62 @@ World-space UI showing `"Count: X / Y"`. Subscribes to chute events. Shows compl
 
 ---
 
+## System 11: ID Card Verification
+
+### NPCIdentity.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → NPC Identity**.
+
+| Field | Purpose |
+|---|---|
+| `fullName` | Displayed on ID card and computer screen |
+| `dateOfBirth` | Date of birth shown on computer |
+| `address` | Address shown on computer |
+| `idNumber` | Unique ID / barcode number |
+| `photoSprite` | Optional headshot for computer display |
+
+### IDCardSlot.cs
+Attach to a counter surface. Holds a single ID card.
+
+**Key methods**: `PlaceIDCard(prefab, identity)` — spawns the card and initializes it. `RemoveIDCard()` — destroys the card.
+
+**Editor setup**: Assign `focusCameraTarget` (empty Transform positioned where the camera looks at the card).
+
+### IDCardInteraction.cs
+Attach to the ID card prefab. Handles focus mode + barcode scanning.
+
+**Activation flow** (E press → `Activate()`):
+1. `FocusStateManager.Instance.EnterFocus(focusCameraTarget)` — zooms camera
+2. Player clicks on barcode area → raycast detects `barcodeZone` collider
+3. `NPCInfoDisplay.Instance.ShowNPCInfo(identity)` — updates computer screen
+4. Auto-exits focus after `autoExitDelay` (default 1s), or player presses Escape
+
+**Editor setup**: Assign `barcodeZone` (child collider on barcode area). Optional: `audioSource` + `scanSound`, `scanEffectPrefab`.
+
+### NPCInfoDisplay.cs (Singleton)
+Attach to the computer screen's `InteractiveUI`. `NPCInfoDisplay.Instance`
+
+| Method | Purpose |
+|---|---|
+| `ShowNPCInfo(NPCIdentity)` | Fills text fields + switches computer to `"NPCInfo"` view |
+| `ClearNPCInfo()` | Clears fields + reverts computer to main view |
+
+**Editor setup**: Assign TMPro text references (`nameText`, `dobText`, `addressText`, `idNumberText`), optional `photoImage`. Create an `NPCInfoView` child in `InteractiveUI` and add it to `ComputerScreenController.views[]` with name `"NPCInfo"`.
+
+### NPC Integration
+`NPCInteractionController` has serialized fields: `npcIdentity`, `idCardPrefab`, `idCardSlot`. The ID card is placed simultaneously with items during `HandlePlacingState`. On NPC destroy (`OnDestroy`), `CleanupIDCard()` removes the card and clears the computer display.
+
+---
+
 ## Cross-System Dependencies
 
 ```
 ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
      │                                      ↑
      ├──→ PillCountingStation ──────────────┘
+     │                                      ↑
+     ├──→ IDCardInteraction ────────────────┘
+     │         │
+     │         └──→ NPCInfoDisplay ──→ ComputerScreenController
      │
      ├──→ DeliveryStation ──→ InventoryBox
      │
@@ -432,6 +486,9 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
                                            └──→ ComputerDialogueButton ──┘
                                                     (on computer screen)
 
+NPCInteractionController ──→ IDCardSlot ──→ IDCardInteraction
+                                               └──→ NPCInfoDisplay
+
 DialogueManager ──→ DialogueHistory (records exchanges)
 ```
 
@@ -446,6 +503,8 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 4. **Computer Screen**: `ObjectPickup` detects `ComputerScreen` → `Activate()` → `FocusStateManager.EnterFocus()` → `ComputerScreenController.ResetToMain()` → player clicks tabs/buttons on World Space Canvas → Escape exits
 
 5. **NPC Dialogue**: NPC enters `WaitingForCheckout` → `NPCDialogueTrigger` detects player nearby → `DialogueManager.StartDialogue()` → player clicks response buttons → dialogue navigates nodes → terminal node → auto-closes. Player can use computer screen `ComputerDialogueButton` to start new conversations → `CashRegister` checkout remains separate
+
+6. **ID Card Verification**: NPC places items on counter → `NPCInteractionController.PlaceIDCard()` spawns ID card on `IDCardSlot` simultaneously → player looks at ID card + presses E → `IDCardInteraction.Activate()` → `FocusStateManager.EnterFocus()` → player clicks barcode zone → `NPCInfoDisplay.ShowNPCInfo()` → computer screen shows NPC data → NPC exits → `CleanupIDCard()` removes card + `NPCInfoDisplay.ClearNPCInfo()` reverts computer
 
 ---
 
@@ -494,6 +553,16 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 ### Delivery Station Setup
 - [ ] GameObject with `DeliveryStation` — assign `inventoryBoxPrefab` and `spawnPoint`
 - [ ] InventoryBox prefab: `Rigidbody` + `InventoryBox` + `BoxItemPreview` (optional)
+
+### ID Card Verification Setup
+- [ ] Create `NPCIdentity` ScriptableObject assets (Right-click → Create → NPC → NPC Identity)
+- [ ] Create an ID card prefab: 3D quad/plane with `IDCardInteraction` component
+- [ ] Add a child collider on the barcode area → assign to `IDCardInteraction.barcodeZone`
+- [ ] Place an `IDCardSlot` on the counter with a `focusCameraTarget` empty Transform
+- [ ] On each NPC: assign `npcIdentity` (ScriptableObject), `idCardPrefab`, `idCardSlot`
+- [ ] On computer screen `InteractiveUI`: add `NPCInfoView` child with TMP text fields
+- [ ] Add `NPCInfoDisplay` component to the `InteractiveUI` → wire text references
+- [ ] Add `NPCInfoView` to `ComputerScreenController.views[]` array with name `"NPCInfo"`
 
 ---
 
@@ -576,6 +645,7 @@ Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + upd
 | `FocusStateManager.Instance` | Static | Camera transitions, FPS control toggling |
 | `MouseLook.Instance` | Static | Screen shake, sensitivity adjustment |
 | `DialogueManager.Instance` | Static | Dialogue UI overlay, response handling |
+| `NPCInfoDisplay.Instance` | Static | Populates computer UI with scanned NPC data |
 
 ---
 
@@ -584,3 +654,4 @@ Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + upd
 | Type | Create Menu | Purpose |
 |---|---|---|
 | `ItemCategory` | Create → NPC → Item Category | Defines item type with prefab and rotation offset |
+| `NPCIdentity` | Create → NPC → NPC Identity | Defines NPC personal data (name, DOB, address, ID#, photo) |

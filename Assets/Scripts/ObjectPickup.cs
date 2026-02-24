@@ -39,6 +39,7 @@ public class ObjectPickup : MonoBehaviour
     private PillCountingStation _currentSortingStation;
     private ComputerScreen _currentComputerScreen;
     private CashRegister _currentCashRegister;
+    private IDCardInteraction _currentIDCard;
 
     void Start()
     {
@@ -58,6 +59,7 @@ public class ObjectPickup : MonoBehaviour
         DetectSortingStation();
         DetectComputerScreen();
         DetectCashRegister();
+        DetectIDCard();
 
         if (Input.GetKeyDown(interactKey))
         {
@@ -72,6 +74,11 @@ public class ObjectPickup : MonoBehaviour
                 else if (_currentSortingStation != null && !_currentSortingStation.IsActive)
                 {
                     _currentSortingStation.Activate();
+                }
+                // Check for ID card on counter (focus + barcode scan)
+                else if (_currentIDCard != null && !_currentIDCard.IsActive)
+                {
+                    _currentIDCard.Activate();
                 }
                 // Check for counter item (delete on E press)
                 else if (_currentCounterItem != null && _currentCounterItemSlot != null)
@@ -460,6 +467,22 @@ public class ObjectPickup : MonoBehaviour
         }
 
         _currentCashRegister = newRegister;
+    }
+
+    private void DetectIDCard()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        IDCardInteraction newIDCard = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newIDCard = hit.collider.GetComponent<IDCardInteraction>();
+            if (newIDCard == null)
+                newIDCard = hit.collider.GetComponentInParent<IDCardInteraction>();
+        }
+
+        _currentIDCard = newIDCard;
     }
 
 

@@ -62,6 +62,16 @@ public class NPCInteractionController : MonoBehaviour
     [Tooltip("The exit point where the NPC goes after checkout.")]
     [SerializeField] private Transform exitPoint;
 
+    [Header("ID Card Settings")]
+    [Tooltip("The identity data for this NPC (name, DOB, address, etc.).")]
+    [SerializeField] private NPCIdentity npcIdentity;
+
+    [Tooltip("The ID card prefab to spawn on the counter.")]
+    [SerializeField] private GameObject idCardPrefab;
+
+    [Tooltip("The counter slot where the ID card will be placed.")]
+    [SerializeField] private IDCardSlot idCardSlot;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugGizmos = true;
     [SerializeField] private bool showDebugLogs = false;
@@ -74,6 +84,7 @@ public class NPCInteractionController : MonoBehaviour
     private float _scanTimer;
     private float _pauseTimer;
     private bool _hasStartedMoving;
+    private bool _hasPlacedIDCard = false;
     private bool _hasCheckedOut = false; // Set true when player triggers checkout
     private const float UNREACHABLE_RETRY_TIME = 10f; // Seconds before retrying unreachable items
 
@@ -464,7 +475,8 @@ public class NPCInteractionController : MonoBehaviour
             }
             else
             {
-                // All items placed, wait for checkout
+                // All items placed — also place ID card simultaneously
+                PlaceIDCard();
                 DebugLog("[NPC] All items placed, waiting for checkout");
                 _currentState = NPCState.WaitingForCheckout;
             }
@@ -472,6 +484,8 @@ public class NPCInteractionController : MonoBehaviour
         else
         {
             Debug.LogWarning("[NPC] Place failed - no items held");
+            // Still place ID card even if no store items
+            PlaceIDCard();
             _currentState = NPCState.WaitingForCheckout; // Still wait for checkout even if no items
         }
     }
@@ -856,6 +870,58 @@ public class NPCInteractionController : MonoBehaviour
                 _currentState = NPCState.MovingToCounter;
             }
         }
+    }
+
+    // ── ID Card ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The NPC identity data assigned to this NPC (read-only).
+    /// </summary>
+    public NPCIdentity NpcIdentity => npcIdentity;
+
+    /// <summary>
+    /// Places the NPC's ID card on the counter slot.
+    /// Called when the NPC finishes placing items.
+    /// </summary>
+    public void PlaceIDCard()
+    {
+        if (_hasPlacedIDCard) return;
+        if (npcIdentity == null || idCardPrefab == null || idCardSlot == null)
+        {
+            DebugLog("[NPC] Cannot place ID card — missing identity, prefab, or slot reference.");
+            return;
+        }
+
+        _hasPlacedIDCard = true;
+        idCardSlot.PlaceIDCard(idCardPrefab, npcIdentity);
+        DebugLog($"[NPC] Placed ID card for '{npcIdentity.fullName}' on counter.");
+    }
+
+    /// <summary>
+    /// Removes the ID card from the counter and clears the computer NPC info.
+    /// Called when the NPC is destroyed (exits the store).
+    /// </summary>
+    public void CleanupIDCard()
+    {
+        if (!_hasPlacedIDCard) return;
+
+        if (idCardSlot != null)
+        {
+            idCardSlot.RemoveIDCard();
+        }
+
+        if (NPCInfoDisplay.Instance != null)
+        {
+            NPCInfoDisplay.Instance.ClearNPCInfo();
+        }
+
+        _hasPlacedIDCard = false;
+        DebugLog("[NPC] ID card cleaned up.");
+    }
+
+    private void OnDestroy()
+    {
+        CleanupIDCard();
     }
 
     /// <summary>
