@@ -5033,6 +5033,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1758968586}
   - component: {fileID: 1758968587}
+  - component: {fileID: 1758968588}
   m_Layer: 0
   m_Name: InteractiveUI
   m_TagString: Untagged
@@ -5086,6 +5087,25 @@ MonoBehaviour:
   OnViewChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1758968588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758968585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 204380d4a29747d479408f37432c7316, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  screenController: {fileID: 1758968587}
+  npcInfoViewName: NPCInfo
+  nameText: {fileID: 0}
+  dobText: {fileID: 0}
+  addressText: {fileID: 0}
+  idNumberText: {fileID: 0}
+  photoImage: {fileID: 0}
 --- !u!1 &1763361354
 GameObject:
   m_ObjectHideFlags: 0
@@ -6181,7 +6201,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1957964687}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 204380d4a29747d479408f37432c7316, type: 3}
   m_Name: 
