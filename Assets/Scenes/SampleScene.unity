@@ -259,6 +259,7 @@ GameObject:
   - component: {fileID: 61043324}
   - component: {fileID: 61043326}
   - component: {fileID: 61043325}
+  - component: {fileID: 61043327}
   m_Layer: 0
   m_Name: NameText
   m_TagString: Untagged
@@ -305,7 +306,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Bob Mortimer
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -384,6 +385,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 61043323}
   m_CullTransparentMesh: 1
+--- !u!114 &61043327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 61043323}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: faa3aed6d31b21a4cae1438ec8cd66e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fieldType: 0
 --- !u!1 &83136890
 GameObject:
   m_ObjectHideFlags: 0
@@ -5309,10 +5323,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   npcInfoPanel: {fileID: 875965377}
-  nameText: {fileID: 61043325}
-  dobText: {fileID: 0}
-  addressText: {fileID: 0}
-  idNumberText: {fileID: 0}
   photoImage: {fileID: 0}
 --- !u!1 &1763361354
 GameObject:

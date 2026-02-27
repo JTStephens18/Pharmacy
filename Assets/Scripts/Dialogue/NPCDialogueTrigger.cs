@@ -196,8 +196,10 @@ public class NPCDialogueTrigger : MonoBehaviour
         _loadedData = DialogueLoader.Load(jsonAsset, out _loadedLookup);
         if (_loadedData == null || _loadedLookup == null) return;
 
+        string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
+
         _dialogueInProgress = true;
-        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform);
+        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
 
         DebugLog($"[NPCDialogueTrigger] Started dialogue '{_loadedData.dialogueId}' (file index {index})");
     }

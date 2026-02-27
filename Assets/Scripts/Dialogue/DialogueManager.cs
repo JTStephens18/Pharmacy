@@ -61,6 +61,7 @@ public class DialogueManager : MonoBehaviour
     private List<GameObject> _spawnedButtons = new List<GameObject>();
     private Transform _lookAtTarget;
     private Coroutine _cameraLerpCoroutine;
+    private string _speakerNameOverride;
 
     /// <summary>Whether a dialogue is currently being displayed.</summary>
     public bool IsActive => _isActive;
@@ -108,8 +109,9 @@ public class DialogueManager : MonoBehaviour
     /// <summary>
     /// Start a dialogue conversation from pre-loaded data.
     /// Optionally pass the NPC transform to smoothly look at them.
+    /// speakerNameOverride replaces the JSON's root speakerName (but node-level overrides still win).
     /// </summary>
-    public void StartDialogue(DialogueData data, Dictionary<string, DialogueNode> nodeLookup, Transform npcTransform = null)
+    public void StartDialogue(DialogueData data, Dictionary<string, DialogueNode> nodeLookup, Transform npcTransform = null, string speakerNameOverride = null)
     {
         if (_isActive)
         {
@@ -126,6 +128,7 @@ public class DialogueManager : MonoBehaviour
         _currentDialogue = data;
         _nodeLookup = nodeLookup;
         _lookAtTarget = npcTransform;
+        _speakerNameOverride = speakerNameOverride;
         _isActive = true;
 
         Debug.Log($"[DialogueManager] Starting dialogue '{data.dialogueId}' with {nodeLookup.Count} nodes.");
@@ -184,6 +187,7 @@ public class DialogueManager : MonoBehaviour
         _nodeLookup = null;
         _currentNode = null;
         _lookAtTarget = null;
+        _speakerNameOverride = null;
 
         // Stop camera lerp if still running
         if (_cameraLerpCoroutine != null)
@@ -288,10 +292,12 @@ public class DialogueManager : MonoBehaviour
     {
         _currentNode = node;
 
-        // Determine speaker name (node override or default)
+        // Determine speaker name: node-level → identity override → JSON default
         string speaker = !string.IsNullOrEmpty(node.speakerName)
             ? node.speakerName
-            : (_currentDialogue != null ? _currentDialogue.speakerName : "???");
+            : (!string.IsNullOrEmpty(_speakerNameOverride)
+                ? _speakerNameOverride
+                : (_currentDialogue != null ? _currentDialogue.speakerName : "???"));
 
         // Update UI text
         if (speakerNameText != null)

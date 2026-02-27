@@ -1,11 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
 /// Singleton that populates the computer screen with NPC identity data after barcode scanning.
 /// Lives on the computer screen's InteractiveUI. Shows/hides a panel inside the main view
 /// rather than switching to a separate view.
+///
+/// Text fields are populated automatically: add an NPCIdentityField component to any
+/// TextMeshProUGUI inside npcInfoPanel, set its FieldType, and it will be found at runtime.
+/// No manual TMP wiring needed.
 ///
 /// Usage:
 ///   NPCInfoDisplay.Instance.ShowNPCInfo(npcIdentity);  // After barcode scan
@@ -17,24 +20,11 @@ public class NPCInfoDisplay : MonoBehaviour
 
     [Header("NPC Info Panel")]
     [Tooltip("The panel GameObject inside the main view that shows NPC info. " +
-             "Enable/disable this to show or hide the info section.")]
+             "Text elements inside it with NPCIdentityField components are populated automatically.")]
     [SerializeField] private GameObject npcInfoPanel;
 
-    [Header("UI Text Fields")]
-    [Tooltip("Displays the NPC's full name.")]
-    [SerializeField] private TextMeshProUGUI nameText;
-
-    [Tooltip("Displays the NPC's date of birth.")]
-    [SerializeField] private TextMeshProUGUI dobText;
-
-    [Tooltip("Displays the NPC's address.")]
-    [SerializeField] private TextMeshProUGUI addressText;
-
-    [Tooltip("Displays the NPC's ID number.")]
-    [SerializeField] private TextMeshProUGUI idNumberText;
-
     [Header("UI Image")]
-    [Tooltip("Optional: Displays the NPC's photo.")]
+    [Tooltip("Optional: Displays the NPC's photo. Assign the Image component directly.")]
     [SerializeField] private Image photoImage;
 
     // ── Runtime State ───────────────────────────────────────────────
@@ -77,18 +67,12 @@ public class NPCInfoDisplay : MonoBehaviour
         _currentIdentity = identity;
         _isDisplaying = true;
 
-        // Populate text fields
-        if (nameText != null)
-            nameText.text = identity.fullName;
-
-        if (dobText != null)
-            dobText.text = identity.dateOfBirth;
-
-        if (addressText != null)
-            addressText.text = identity.address;
-
-        if (idNumberText != null)
-            idNumberText.text = identity.idNumber;
+        // Populate all NPCIdentityField components inside the panel automatically
+        if (npcInfoPanel != null)
+        {
+            foreach (NPCIdentityField field in npcInfoPanel.GetComponentsInChildren<NPCIdentityField>())
+                field.Populate(identity);
+        }
 
         // Set photo
         if (photoImage != null)
@@ -122,11 +106,12 @@ public class NPCInfoDisplay : MonoBehaviour
         _currentIdentity = null;
         _isDisplaying = false;
 
-        // Clear text fields
-        if (nameText != null) nameText.text = "";
-        if (dobText != null) dobText.text = "";
-        if (addressText != null) addressText.text = "";
-        if (idNumberText != null) idNumberText.text = "";
+        // Clear all NPCIdentityField components inside the panel
+        if (npcInfoPanel != null)
+        {
+            foreach (NPCIdentityField field in npcInfoPanel.GetComponentsInChildren<NPCIdentityField>())
+                field.Clear();
+        }
 
         // Hide photo
         if (photoImage != null)
