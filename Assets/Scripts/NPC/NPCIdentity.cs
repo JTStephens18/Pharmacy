@@ -20,7 +20,24 @@ public class NPCIdentity : ScriptableObject
     [Tooltip("Unique ID number / barcode number.")]
     public string idNumber;
 
-    [Header("Visuals")]
+    [Header("Computer Screen Visuals")]
     [Tooltip("Optional headshot photo displayed on the computer screen.")]
     public Sprite photoSprite;
+
+    [Header("ID Card Overrides")]
+    [Tooltip("Photo printed on the physical ID card. " +
+             "If unassigned, falls back to photoSprite above.")]
+    public Sprite idCardPhotoSprite;
+
+    [Tooltip("Name printed on the physical ID card. " +
+             "If empty, falls back to fullName above.")]
+    public string idCardName;
+
+    // ── Convenience properties ───────────────────────────────────────
+
+    /// <summary>Photo to display on the physical ID card (falls back to photoSprite if not set).</summary>
+    public Sprite IdCardPhoto => idCardPhotoSprite != null ? idCardPhotoSprite : photoSprite;
+
+    /// <summary>Name to print on the physical ID card (falls back to fullName if not set).</summary>
+    public string IdCardDisplayName => !string.IsNullOrEmpty(idCardName) ? idCardName : fullName;
 }

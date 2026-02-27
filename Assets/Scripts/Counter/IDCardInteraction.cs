@@ -74,6 +74,14 @@ public class IDCardInteraction : MonoBehaviour
         {
             CreateAutoFocusTarget();
         }
+
+        // Populate physical card visuals (photo + printed name)
+        IDCardVisuals visuals = GetComponent<IDCardVisuals>();
+        if (visuals == null)
+            visuals = GetComponentInChildren<IDCardVisuals>();
+
+        if (visuals != null && identity != null)
+            visuals.Initialize(identity);
     }
 
     void Start()
