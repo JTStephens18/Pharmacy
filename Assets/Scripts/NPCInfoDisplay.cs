@@ -4,7 +4,8 @@ using TMPro;
 
 /// <summary>
 /// Singleton that populates the computer screen with NPC identity data after barcode scanning.
-/// Lives on the computer screen's InteractiveUI and manages the NPC info view.
+/// Lives on the computer screen's InteractiveUI. Shows/hides a panel inside the main view
+/// rather than switching to a separate view.
 ///
 /// Usage:
 ///   NPCInfoDisplay.Instance.ShowNPCInfo(npcIdentity);  // After barcode scan
@@ -14,12 +15,10 @@ public class NPCInfoDisplay : MonoBehaviour
 {
     public static NPCInfoDisplay Instance { get; private set; }
 
-    [Header("Computer Screen Reference")]
-    [Tooltip("The ComputerScreenController to switch views on.")]
-    [SerializeField] private ComputerScreenController screenController;
-
-    [Tooltip("The name of the NPC Info view in the ComputerScreenController views array.")]
-    [SerializeField] private string npcInfoViewName = "NPCInfo";
+    [Header("NPC Info Panel")]
+    [Tooltip("The panel GameObject inside the main view that shows NPC info. " +
+             "Enable/disable this to show or hide the info section.")]
+    [SerializeField] private GameObject npcInfoPanel;
 
     [Header("UI Text Fields")]
     [Tooltip("Displays the NPC's full name.")]
@@ -58,17 +57,13 @@ public class NPCInfoDisplay : MonoBehaviour
         }
         Instance = this;
 
-        // Auto-find ComputerScreenController if not assigned
-        if (screenController == null)
-        {
-            screenController = GetComponentInParent<ComputerScreenController>();
-            if (screenController == null)
-                screenController = FindFirstObjectByType<ComputerScreenController>();
-        }
+        // Hide the info panel by default until an ID is scanned
+        if (npcInfoPanel != null)
+            npcInfoPanel.SetActive(false);
     }
 
     /// <summary>
-    /// Populates the NPC info fields and switches the computer to the NPC Info view.
+    /// Populates the NPC info fields and shows the info panel on the main view.
     /// Called by IDCardInteraction after a successful barcode scan.
     /// </summary>
     public void ShowNPCInfo(NPCIdentity identity)
@@ -109,20 +104,15 @@ public class NPCInfoDisplay : MonoBehaviour
             }
         }
 
-        // Switch computer screen to NPC info view
-        if (screenController != null)
-        {
-            screenController.ShowView(npcInfoViewName);
-            Debug.Log($"[NPCInfoDisplay] Showing info for '{identity.fullName}' on computer screen.");
-        }
-        else
-        {
-            Debug.LogWarning("[NPCInfoDisplay] No ComputerScreenController assigned — cannot switch view.");
-        }
+        // Show the info panel within the main view
+        if (npcInfoPanel != null)
+            npcInfoPanel.SetActive(true);
+
+        Debug.Log($"[NPCInfoDisplay] Showing info for '{identity.fullName}' on main view.");
     }
 
     /// <summary>
-    /// Clears the NPC info display and reverts the computer to its main view.
+    /// Clears the NPC info display and hides the info panel.
     /// Called when the NPC exits the store or is destroyed.
     /// </summary>
     public void ClearNPCInfo()
@@ -142,11 +132,10 @@ public class NPCInfoDisplay : MonoBehaviour
         if (photoImage != null)
             photoImage.enabled = false;
 
-        // Revert computer screen to main view
-        if (screenController != null)
-        {
-            screenController.ResetToMain();
-            Debug.Log("[NPCInfoDisplay] Cleared NPC info, computer reverted to main view.");
-        }
+        // Hide the info panel
+        if (npcInfoPanel != null)
+            npcInfoPanel.SetActive(false);
+
+        Debug.Log("[NPCInfoDisplay] Cleared NPC info, panel hidden.");
     }
 }

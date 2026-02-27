@@ -450,10 +450,10 @@ Attach to the computer screen's `InteractiveUI`. `NPCInfoDisplay.Instance`
 
 | Method | Purpose |
 |---|---|
-| `ShowNPCInfo(NPCIdentity)` | Fills text fields + switches computer to `"NPCInfo"` view |
-| `ClearNPCInfo()` | Clears fields + reverts computer to main view |
+| `ShowNPCInfo(NPCIdentity)` | Fills text fields + shows `npcInfoPanel` in the main view |
+| `ClearNPCInfo()` | Clears fields + hides `npcInfoPanel` |
 
-**Editor setup**: Assign TMPro text references (`nameText`, `dobText`, `addressText`, `idNumberText`), optional `photoImage`. Create an `NPCInfoView` child in `InteractiveUI` and add it to `ComputerScreenController.views[]` with name `"NPCInfo"`.
+**Editor setup**: Assign `npcInfoPanel` (a child GameObject inside the main view that holds the NPC info layout). Assign TMPro text references (`nameText`, `dobText`, `addressText`, `idNumberText`), optional `photoImage`. The panel is hidden by default and revealed on scan — no separate view or tab needed.
 
 ### NPC Integration
 `NPCInteractionController` has serialized fields: `npcIdentity`, `idCardPrefab`, `idCardSlot`. The ID card is placed simultaneously with items during `HandlePlacingState`. On NPC destroy (`OnDestroy`), `CleanupIDCard()` removes the card and clears the computer display.
@@ -560,9 +560,9 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 - [ ] Add a child collider on the barcode area → assign to `IDCardInteraction.barcodeZone`
 - [ ] Place an `IDCardSlot` on the counter with a `focusCameraTarget` empty Transform
 - [ ] On each NPC: assign `npcIdentity` (ScriptableObject), `idCardPrefab`, `idCardSlot`
-- [ ] On computer screen `InteractiveUI`: add `NPCInfoView` child with TMP text fields
-- [ ] Add `NPCInfoDisplay` component to the `InteractiveUI` → wire text references
-- [ ] Add `NPCInfoView` to `ComputerScreenController.views[]` array with name `"NPCInfo"`
+- [ ] On the main view inside `InteractiveUI`: add a child panel (`NPCInfoPanel`) with TMP text fields and optional photo Image
+- [ ] Add `NPCInfoDisplay` component to the `InteractiveUI` → assign `npcInfoPanel` + wire text references
+- [ ] Leave `NPCInfoPanel` **disabled** in the Editor — the script enables it on scan
 
 ---
 
