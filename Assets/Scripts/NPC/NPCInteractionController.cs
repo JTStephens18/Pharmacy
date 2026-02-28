@@ -164,6 +164,7 @@ public class NPCInteractionController : MonoBehaviour
             if (exitPoint != null)
             {
                 DebugLog($"[NPC] Checkout complete! Heading to exit at {exitPoint.position}");
+                CleanupIDCard();
                 _agent.SetDestination(exitPoint.position);
                 _currentState = NPCState.MovingToExit;
             }
@@ -382,6 +383,7 @@ public class NPCInteractionController : MonoBehaviour
             if (exitPoint != null)
             {
                 DebugLog($"[NPC] Checkout complete! Heading to exit at {exitPoint.position}");
+                CleanupIDCard();
                 _agent.SetDestination(exitPoint.position);
                 _currentState = NPCState.MovingToExit;
             }
@@ -855,6 +857,7 @@ public class NPCInteractionController : MonoBehaviour
             if (exitPoint != null)
             {
                 DebugLog($"[NPC] Heading to exit immediately at {exitPoint.position}");
+                CleanupIDCard();
                 _agent.SetDestination(exitPoint.position);
                 _currentState = NPCState.MovingToExit;
             }
