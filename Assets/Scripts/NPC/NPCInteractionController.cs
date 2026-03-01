@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -9,6 +10,11 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class NPCInteractionController : MonoBehaviour
 {
+    /// <summary>
+    /// Fired just before an NPC is destroyed after reaching the exit (or despawning immediately).
+    /// </summary>
+    public static event Action<NPCInteractionController> OnNPCExited;
+
     [Header("Detection Settings")]
     [Tooltip("Radius within which the NPC scans for interactable items.")]
     [SerializeField] private float detectionRadius = 10f;
@@ -171,6 +177,7 @@ public class NPCInteractionController : MonoBehaviour
             else
             {
                 Debug.LogWarning("[NPC] Checkout triggered but no exit point assigned! Despawning immediately.");
+                OnNPCExited?.Invoke(this);
                 Destroy(gameObject);
             }
             return;
@@ -203,6 +210,7 @@ public class NPCInteractionController : MonoBehaviour
         {
             DebugLog("[NPC] Reached exit. Goodbye!");
             _hasStartedMoving = false;
+            OnNPCExited?.Invoke(this);
             Destroy(gameObject);
         }
     }
@@ -390,6 +398,7 @@ public class NPCInteractionController : MonoBehaviour
             else
             {
                 Debug.LogWarning("[NPC] Checkout triggered but no exit point assigned! Despawning immediately.");
+                OnNPCExited?.Invoke(this);
                 Destroy(gameObject);
             }
         }
@@ -881,6 +890,20 @@ public class NPCInteractionController : MonoBehaviour
     /// The NPC identity data assigned to this NPC (read-only).
     /// </summary>
     public NPCIdentity NpcIdentity => npcIdentity;
+
+    /// <summary>
+    /// Assigns shared scene references that can't be saved on prefabs.
+    /// Called by NPCSpawnManager after instantiation.
+    /// </summary>
+    public void AssignSceneReferences(List<CounterSlot> counters, Transform exit, IDCardSlot cardSlot, List<ShelfSlot> shelfSlots)
+    {
+        counterSlots = counters;
+        exitPoint = exit;
+        idCardSlot = cardSlot;
+        allowedShelfSlots = shelfSlots;
+        if (shelfSlots != null && shelfSlots.Count > 0)
+            useShelfSlots = true;
+    }
 
     /// <summary>
     /// Places the NPC's ID card on the counter slot.

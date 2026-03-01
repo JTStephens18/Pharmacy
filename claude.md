@@ -24,6 +24,7 @@ Assets/Scripts/
 ├── ObjectPickup.cs            # Central interaction hub (pickup, throw, place, interact)
 ├── HoldableItem.cs            # Per-item hold offset overrides
 ├── FrameRateManager.cs        # Static 60 FPS initializer
+├── GameStarter.cs             # Triggers NPCSpawnManager.StartNPCSpawning() on Start
 ├── CashRegister.cs            # Checkout trigger
 ├── ComputerScreen.cs          # Computer focus + UI activation
 ├── ComputerScreenController.cs# View/tab manager for computer UI
@@ -45,6 +46,8 @@ Assets/Scripts/
 │   ├── InteractableItem.cs    # Shelf item that NPCs pick up
 │   ├── ItemCategory.cs        # ScriptableObject: item type + prefab
 │   ├── NPCIdentity.cs         # ScriptableObject: NPC personal data for ID card
+│   ├── RoundConfig.cs         # ScriptableObject: NPC queue config per round
+│   ├── NPCSpawnManager.cs     # Sequential NPC spawner from RoundConfig queue
 │   ├── NPCInteractionController.cs  # NPC state machine (13 states)
 │   └── NPCAnimationController.cs    # Drives Animator from NPC state
 │
@@ -242,8 +245,11 @@ Idle → MovingToItem → WaitingAtItem → Pickup →
 **Item source**: Can scan scene for `InteractableItem` or take items directly from assigned `ShelfSlot[]` references.
 
 **Events**: `OnPickupStart`, `OnPlaceStart` — used by `NPCAnimationController`.
+**Static event**: `OnNPCExited(NPCInteractionController)` — fired just before destroy at all exit paths. Used by `NPCSpawnManager` to trigger next spawn.
 
-**Editor setup**: Assign `handTransform`, `counterTarget`, `exitTarget`, `allowedShelfSlots[]`, `counterSlots[]`.
+**Scene ref injection**: `AssignSceneReferences(counterSlots, exitPoint, idCardSlot, shelfSlots)` — called by `NPCSpawnManager` after instantiation. These fields are left empty on prefabs since they reference scene objects.
+
+**Editor setup**: On prefabs, assign `handTransform` (child bone), `npcIdentity`, `idCardPrefab`, `wantedCategories`. Leave `counterSlots`, `exitPoint`, `idCardSlot`, `allowedShelfSlots` empty — injected at runtime by `NPCSpawnManager`.
 
 ### NPCAnimationController.cs
 Attach alongside `NPCInteractionController`. Auto-finds `Animator` in children.
@@ -493,6 +499,92 @@ Add to any `TextMeshProUGUI` or `Button` (with a TMP child) inside an `NPCInfoPa
 
 ---
 
+## System 12: NPC Spawn Queue
+
+### RoundConfig.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → Round Config**.
+
+Defines the NPC queue for a single round/session.
+
+| Field | Purpose |
+|---|---|
+| `npcPool` | `List<GameObject>` — Pool of NPC prefabs available for random selection |
+| `queueEntries` | `List<QueueEntry>` — Ordered list of queue positions |
+
+**`QueueEntry` (Serializable class)**:
+
+| Field | Purpose |
+|---|---|
+| `isFixed` | If true, always spawn `fixedNpcPrefab` at this queue position |
+| `fixedNpcPrefab` | The specific NPC prefab (only used when `isFixed` is true) |
+
+When `isFixed` is false, the spawner picks a random NPC from `npcPool`. Fixed NPCs are automatically removed from the pool so they can't be duplicated by random picks. Once any NPC is used (fixed or random), it is removed from the available pool for the rest of the round.
+
+### NPCSpawnManager.cs
+Attach to a persistent scene GameObject.
+
+Manages sequential NPC spawning from a `RoundConfig`. Spawns one NPC at a time, waits for it to exit and despawn, then spawns the next after a configurable delay.
+
+| Field | Purpose |
+|---|---|
+| `spawnPoint` | Transform where NPCs appear |
+| `initialDelay` | Seconds before first NPC spawns (default 2) |
+| `delayAfterExit` | Seconds between NPC despawn and next spawn (default 3) |
+| `counterSlots` | Shared `List<CounterSlot>` assigned to every NPC |
+| `exitPoint` | Shared exit Transform assigned to every NPC |
+| `idCardSlot` | Shared `IDCardSlot` assigned to every NPC |
+| `allowedShelfSlots` | Shared `List<ShelfSlot>` assigned to every NPC |
+
+**API**:
+- `StartNPCSpawning(RoundConfig config)` — Resolves the queue (fixed + random picks), starts spawning coroutine
+- `StopNPCSpawning()` — Stops spawning, clears remaining queue
+
+**Events**:
+- `OnNPCSpawned(NPCInteractionController)` — Fired after each NPC is instantiated
+- `OnAllNPCsFinished` — Fired when all NPCs have exited
+
+**Internal flow**:
+1. Copies `config.npcPool` into a working list, resolves all `QueueEntry` items into concrete prefabs (removing each from the pool as used)
+2. Coroutine: waits `initialDelay` → spawns NPC → calls `AssignSceneReferences()` to inject shared scene refs → waits for `OnNPCExited` event → waits `delayAfterExit` → repeats until queue empty
+
+**Scene reference injection**: NPC prefabs cannot hold references to scene objects. After instantiation, `NPCSpawnManager` calls `NPCInteractionController.AssignSceneReferences()` to inject `counterSlots`, `exitPoint`, `idCardSlot`, and `allowedShelfSlots`. Per-NPC data (identity, wanted categories, dialogue files, id card prefab, hand bone) stays on the prefab.
+
+### NPCInteractionController.cs — Spawn-Related Additions
+
+**Static event** (used by `NPCSpawnManager`):
+```csharp
+public static event Action<NPCInteractionController> OnNPCExited;
+```
+Fired just before `Destroy(gameObject)` at all exit paths (normal exit, immediate despawn).
+
+**Scene reference setter**:
+```csharp
+public void AssignSceneReferences(List<CounterSlot> counters, Transform exit, IDCardSlot cardSlot, List<ShelfSlot> shelfSlots)
+```
+Called by `NPCSpawnManager` after instantiation. Also auto-enables `useShelfSlots` if shelf slots are provided.
+
+### GameStarter.cs
+Attach to any persistent GameObject. Calls `NPCSpawnManager.StartNPCSpawning(roundConfig)` in `Start()`.
+
+| Field | Purpose |
+|---|---|
+| `spawnManager` | Reference to the `NPCSpawnManager` in the scene |
+| `roundConfig` | The `RoundConfig` ScriptableObject asset to use |
+
+### NPC Prefab Setup (for spawning)
+NPC prefabs should have these fields filled in (they survive prefabbing as asset/internal refs):
+- `npcIdentity` (ScriptableObject)
+- `idCardPrefab` (prefab reference)
+- `wantedCategories` (ScriptableObjects)
+- `dialogueFiles` (TextAssets — on `NPCDialogueTrigger`)
+- `handBone` (child Transform — internal prefab ref)
+- All behavior settings (detection radius, batch size, etc.)
+
+These fields should be **left empty** on the prefab (injected by spawner at runtime):
+- `counterSlots`, `exitPoint`, `idCardSlot`, `allowedShelfSlots`
+
+---
+
 ## Cross-System Dependencies
 
 ```
@@ -522,6 +614,10 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
 NPCInteractionController ──→ IDCardSlot ──→ IDCardInteraction ──→ IDCardVisuals
                                                └──→ NPCInfoDisplay (panel toggle on scan)
 
+GameStarter ──→ NPCSpawnManager ──→ NPCInteractionController (instantiate + inject scene refs)
+                     │                        │
+                     └── RoundConfig          └──→ OnNPCExited (static event → triggers next spawn)
+
 DialogueManager ──→ DialogueHistory (records exchanges)
 ```
 
@@ -529,7 +625,7 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 
 1. **Shelf Restocking**: `DeliveryStation.SpawnBox()` → player picks up `InventoryBox` → `ItemPlacementManager` detects nearby shelves → builds queue from `ShelfSection.GetMissingItems()` → player places items → `ShelfSlot.PlaceItem()` + `InventoryBox.Decrement()`
 
-2. **NPC Shopping**: `NPCInteractionController` scans `ShelfSlot[]` → navigates → picks up `InteractableItem` → navigates to counter → `CounterSlot.PlaceItem()` → waits → `CashRegister.TriggerCheckout()` → navigates to exit → destroys self
+2. **NPC Shopping**: `NPCSpawnManager` instantiates NPC prefab at `spawnPoint` → `AssignSceneReferences()` injects shared scene refs → `NPCInteractionController` scans `ShelfSlot[]` → navigates → picks up `InteractableItem` → navigates to counter → `CounterSlot.PlaceItem()` → waits → `CashRegister.TriggerCheckout()` → navigates to exit → fires `OnNPCExited` → destroys self → `NPCSpawnManager` spawns next NPC after delay
 
 3. **Pill Counting**: `ObjectPickup` detects `PillCountingStation` → `Activate()` → `FocusStateManager.EnterFocus()` → `PillSpawner.SpawnPills()` → player uses `PillScraper` → pills enter `PillCountingChute` → count reaches target → auto-exit
 
@@ -557,12 +653,22 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 - [ ] Each `ShelfSlot`: assign `acceptedCategory` (ItemCategory asset) and configure `itemPlacements[]` positions
 - [ ] Ensure shelf has a Collider somewhere in hierarchy (for `IPlaceable` detection)
 
-### NPC Setup
+### NPC Prefab Setup
 - [ ] NPC with `NavMeshAgent` + `NPCInteractionController` + `NPCAnimationController`
-- [ ] Assign `handTransform` (child bone), `counterTarget`, `exitTarget` Transforms
-- [ ] Assign `allowedShelfSlots[]` and `counterSlots[]`
+- [ ] Assign `handTransform` (child bone) — internal prefab ref, survives prefabbing
+- [ ] Assign `npcIdentity` (ScriptableObject), `idCardPrefab` (prefab), `wantedCategories` (ScriptableObjects)
+- [ ] **Leave empty**: `counterSlots`, `exitPoint`, `idCardSlot`, `allowedShelfSlots` — injected by `NPCSpawnManager` at runtime
 - [ ] Animator Controller with params: `IsWalking` (bool), `Speed` (float), `PickUp` (trigger), `Place` (trigger)
 - [ ] Item prefabs need `InteractableItem` component + `Collider` + child named `GrabTarget`
+- [ ] Optional: add `NPCDialogueTrigger` with `dialogueFiles[]` (TextAsset array)
+
+### NPC Spawn System Setup
+- [ ] Create `RoundConfig` asset (Right-click → Create → NPC → Round Config)
+  - Fill `npcPool` with NPC prefabs eligible for random selection
+  - Fill `queueEntries` — set `isFixed` + `fixedNpcPrefab` for guaranteed NPCs, leave unchecked for random picks
+- [ ] Create a scene GameObject with `NPCSpawnManager`
+  - Assign `spawnPoint` (entrance Transform), `exitPoint`, `counterSlots`, `idCardSlot`, `allowedShelfSlots`
+- [ ] Add `GameStarter` component (same or different GameObject) — assign `spawnManager` and `roundConfig`
 
 ### Counter Checkout Setup
 - [ ] Counter surfaces with `CounterSlot` (configure `itemPlacements[]`)
@@ -597,7 +703,7 @@ DialogueManager ──→ DialogueHistory (records exchanges)
   - Add a child with `TextMeshPro` (3D) for the name → assign to `IDCardVisuals.nameText`
     - Rotate `(90, 0, 0)` to lie flat, size via Font Size (not Transform scale)
 - [ ] Place an `IDCardSlot` on the counter with a `focusCameraTarget` empty Transform
-- [ ] On each NPC: assign `npcIdentity` (ScriptableObject), `idCardPrefab`, `idCardSlot`
+- [ ] On each NPC prefab: assign `npcIdentity` (ScriptableObject), `idCardPrefab` (prefab ref). Leave `idCardSlot` empty — injected by `NPCSpawnManager`
 - [ ] On the main view inside `InteractiveUI`: add a child panel (`NPCInfoPanel`) — **leave it disabled**
   - For each text element inside the panel: **Add Component → NPCIdentityField**, set `FieldType`
   - Optionally add an `Image` for the photo
@@ -697,3 +803,4 @@ Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + upd
 |---|---|---|
 | `ItemCategory` | Create → NPC → Item Category | Defines item type with prefab and rotation offset |
 | `NPCIdentity` | Create → NPC → NPC Identity | Defines NPC personal data (name, DOB, address, ID#, photo) + optional ID card overrides (card name, card photo) |
+| `RoundConfig` | Create → NPC → Round Config | Defines NPC queue per round: pool of prefabs + ordered queue entries (fixed or random) |
