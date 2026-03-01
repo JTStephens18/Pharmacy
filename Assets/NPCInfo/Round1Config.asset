@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ca4191ffa0e8092409ef7f7c6df1ed18, type: 3}
-  m_Name: NewRoundConfig
+  m_Name: Round1Config
   m_EditorClassIdentifier: 
   npcPool:
   - {fileID: 2747849970013689978, guid: 34fa437e2c8ed534e979ab8351ed4038, type: 3}

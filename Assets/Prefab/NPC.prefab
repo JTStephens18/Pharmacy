@@ -235,6 +235,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialogueFiles:
   - {fileID: 4900000, guid: a69facab811d40e48b240d51537cfa9d, type: 3}
+  infoDialogues:
+  - key: dob
+    dialogueFile: {fileID: 4900000, guid: f85387563526dac45844a2a75844567b, type: 3}
   playerRange: 4
   requireLineOfSight: 1
   lineOfSightMask:

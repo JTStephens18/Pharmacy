@@ -1,0 +1,65 @@
+{
+    "dialogueId": "npc_customer_01_address",
+    "speakerName": "Customer",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Is there a question about my address?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Can you confirm the address we have on file?",
+                    "nextNodeId": "confirm"
+                },
+                {
+                    "text": "We need a current address for your prescription records.",
+                    "nextNodeId": "records"
+                }
+            ]
+        },
+        {
+            "id": "confirm",
+            "text": "Sure, it should be the same one on my ID. Has it not updated?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It matches perfectly. We're all set.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "Have you moved recently?",
+                    "nextNodeId": "moved"
+                }
+            ]
+        },
+        {
+            "id": "records",
+            "text": "Of course. The address on my card is still current. I haven't moved.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Perfect, I'll keep that on file. Thank you.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "No, I've been at the same place for a while now. It should all match.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Alright, everything checks out. Thanks for confirming.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "No problem at all. Happy to help!",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

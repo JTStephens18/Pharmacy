@@ -71,10 +71,13 @@ Assets/Scripts/
     ├── DialogueManager.cs     # Singleton: dialogue UI overlay controller
     ├── DialogueHistory.cs     # Conversation history log (ENTER to toggle)
     ├── NPCDialogueTrigger.cs  # Per-NPC: auto-triggers dialogue at counter
-    └── ComputerDialogueButton.cs # Computer UI button to restart conversations
+    └── NPCInfoTalkButton.cs   # NPCInfoPanel button: exits PC focus → dialogue → re-enters PC focus
 
 Assets/Data/Dialogues/
-└── npc_customer_01.json       # Sample branching dialogue
+├── npc_customer_01.json           # Sample branching dialogue
+├── npc_customer_01_info.json      # Info/verification dialogue (key: "default")
+├── npc_customer_01_dob.json       # DOB verification dialogue (key: "dob")
+└── npc_customer_01_address.json   # Address verification dialogue (key: "address")
 ```
 
 ---
@@ -340,6 +343,15 @@ Attach to the monitor GameObject.
 **Deactivation** (Escape → focus exit callback → `Deactivate()`):
 1. Disables raycaster, hides interactive UI, shows idle screen
 2. Calls `ComputerScreenController.HideAll()`
+
+**Temporary exit for dialogue** (`TemporaryExitForDialogue(Action onComplete)`):
+1. Suppresses `Deactivate()` — UI stays logically active
+2. Disables raycaster, calls `FocusStateManager.ExitFocus()`
+3. Fires `onComplete` callback after the exit transition finishes
+
+**Reactivation after dialogue** (`ReactivateAfterDialogue()`):
+1. Re-enters focus via `FocusStateManager.EnterFocus()` without resetting views
+2. Re-enables raycaster when the enter transition completes (via `OnFocusChanged` event)
 
 **Editor setup**:
 1. Create a **World Space Canvas** (`ScreenCanvas`) positioned on the monitor
@@ -608,8 +620,10 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
      └──→ CashRegister ─────────┘         │
                                  │         ├──→ NPCDialogueTrigger ──→ DialogueManager
               NPCAnimationController       │                              ↑
-                                           └──→ ComputerDialogueButton ──┘
-                                                    (on computer screen)
+                                           └──→ NPCInfoTalkButton (on NPCInfoPanel)
+                                                         │
+                                                         └──→ ComputerScreen.TemporaryExitForDialogue()
+                                                                   └──→ DialogueManager ──→ ComputerScreen.ReactivateAfterDialogue()
 
 NPCInteractionController ──→ IDCardSlot ──→ IDCardInteraction ──→ IDCardVisuals
                                                └──→ NPCInfoDisplay (panel toggle on scan)
@@ -631,7 +645,7 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 
 4. **Computer Screen**: `ObjectPickup` detects `ComputerScreen` → `Activate()` → `FocusStateManager.EnterFocus()` → `ComputerScreenController.ResetToMain()` → player clicks tabs/buttons on World Space Canvas → Escape exits
 
-5. **NPC Dialogue**: NPC enters `WaitingForCheckout` → `NPCDialogueTrigger` detects player nearby → `DialogueManager.StartDialogue()` → player clicks response buttons → dialogue navigates nodes → terminal node → auto-closes. Player can use computer screen `ComputerDialogueButton` to start new conversations → `CashRegister` checkout remains separate
+5. **NPC Dialogue**: NPC enters `WaitingForCheckout` → `NPCDialogueTrigger` detects player nearby → `DialogueManager.StartDialogue()` → player clicks response buttons → dialogue navigates nodes → terminal node → auto-closes. Player can use `NPCInfoTalkButton` on the NPCInfoPanel to start new conversations (exits computer focus → dialogue → re-enters computer focus) → `CashRegister` checkout remains separate
 
 6. **ID Card Verification**: NPC places items on counter → `NPCInteractionController.PlaceIDCard()` spawns ID card on `IDCardSlot` → `IDCardInteraction.Initialize()` populates `IDCardVisuals` (photo + printed name on physical card) → player looks at ID card + presses E → `IDCardInteraction.Activate()` → `FocusStateManager.EnterFocus()` → player clicks barcode zone → `NPCInfoDisplay.ShowNPCInfo()` → `NPCInfoPanel` appears on computer main view populated via `NPCIdentityField` components → NPC exits → `CleanupIDCard()` removes card + `NPCInfoDisplay.ClearNPCInfo()` hides panel
 
@@ -660,7 +674,7 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 - [ ] **Leave empty**: `counterSlots`, `exitPoint`, `idCardSlot`, `allowedShelfSlots` — injected by `NPCSpawnManager` at runtime
 - [ ] Animator Controller with params: `IsWalking` (bool), `Speed` (float), `PickUp` (trigger), `Place` (trigger)
 - [ ] Item prefabs need `InteractableItem` component + `Collider` + child named `GrabTarget`
-- [ ] Optional: add `NPCDialogueTrigger` with `dialogueFiles[]` (TextAsset array)
+- [ ] Optional: add `NPCDialogueTrigger` with `dialogueFiles[]` (TextAsset array) + `infoDialogues[]` (key/file pairs)
 
 ### NPC Spawn System Setup
 - [ ] Create `RoundConfig` asset (Right-click → Create → NPC → Round Config)
@@ -741,7 +755,8 @@ Attach to a persistent GameObject with a **Screen Space Overlay Canvas**.
 | Speaker name | Priority: node-level JSON name → `speakerNameOverride` → JSON root `speakerName` |
 | Response buttons | Spawned dynamically from a prefab; auto-cleared between nodes |
 | Terminal nodes | Shows "[Continue]" button → closes overlay |
-| Cursor | Unlocks during dialogue, relocks on close |
+| Cursor | Unlocks during dialogue, relocks on close (unless suppressed) |
+| Suppress reset | `SetSuppressEndReset(true)` — skips cursor relock + control re-enable on `EndDialogue()`. Used by `NPCInfoTalkButton` when focus will immediately re-enter |
 | Events | `OnDialogueStarted`, `OnDialogueEnded` |
 
 **Editor setup**: Assign `dialoguePanel`, `speakerNameText` (TMP), `dialogueBodyText` (TMP), `responseContainer` (Transform), `responseButtonPrefab` (Button + TMP child).
@@ -763,18 +778,27 @@ Attach to NPC alongside `NPCInteractionController`.
 | Feature | Details |
 |---|---|
 | Auto-trigger | First dialogue starts when NPC enters `WaitingForCheckout` + player within `playerRange` + line of sight |
-| Repeat conversations | `StartNewConversation()` — called by computer screen button; cycles through `dialogueFiles[]` |
-| State check | `IsAvailableForDialogue()` — used by `ComputerDialogueButton` |
+| Repeat conversations | `StartNewConversation()` — cycles through `dialogueFiles[]` |
+| Info dialogues | `StartInfoDialogue(string key)` — looks up key in `infoDialogues[]` list (`InfoDialogueEntry[]`). Falls back to `StartNewConversation()` if key not found |
+| Key check | `HasInfoDialogue(string key)` — returns true if a dialogue exists for the given key |
+| State check | `IsAvailableForDialogue()` — used by `NPCInfoTalkButton` |
 | Speaker name | Automatically passes `NPCInteractionController.NpcIdentity.fullName` as `speakerNameOverride` to `DialogueManager` |
 
-**Editor setup**: Assign `dialogueFiles[]` (TextAsset array), set `playerRange`, `lineOfSightMask`. The NPC's real name is sourced from the `NPCIdentity` asset on the controller — no manual speaker name needed in the JSON.
+**Editor setup**: Assign `dialogueFiles[]` (TextAsset array), fill `infoDialogues[]` with key/file pairs (e.g. `"default"` → info.json, `"dob"` → dob.json, `"address"` → address.json), set `playerRange`, `lineOfSightMask`. The NPC's real name is sourced from the `NPCIdentity` asset on the controller — no manual speaker name needed in the JSON.
 
-### ComputerDialogueButton.cs
-Attach to a Button on the computer screen UI.
+### NPCInfoTalkButton.cs
+Attach to a Button **inside the `npcInfoPanel`** (child of `InteractiveUI` on the computer screen).
 
-Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + updates text. On click, calls `NPCDialogueTrigger.StartNewConversation()`.
+Orchestrates a three-phase focus chain when clicked:
+1. `ComputerScreen.TemporaryExitForDialogue()` — exits computer focus without deactivating UI
+2. `NPCDialogueTrigger.StartInfoDialogue(dialogueKey)` — starts keyed dialogue (camera lerps to NPC)
+3. On `DialogueManager.OnDialogueEnded` → `ComputerScreen.ReactivateAfterDialogue()` — re-enters computer focus
 
-**Editor setup**: Just add to a Button in a computer screen view. Optionally assign a `CanvasGroup` for fade effect.
+Each button instance has a `dialogueKey` (e.g. `"default"`, `"dob"`, `"address"`) that maps to an `InfoDialogueEntry` on the NPC's `NPCDialogueTrigger`. This allows multiple buttons in the panel — including on identity field buttons — to trigger different dialogue trees.
+
+Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `HasInfoDialogue(key)` to ensure the NPC supports this button's dialogue. Button is interactable only when both conditions are met.
+
+**Editor setup**: Add to any Button inside `npcInfoPanel` (works alongside `NPCIdentityField` on the same button). Set `dialogueKey` to match an entry in the NPC's `infoDialogues[]`. Optionally assign a `CanvasGroup` for fade effect. Finds `ComputerScreen` automatically via hierarchy or scene search.
 
 ### Dialogue Editor Setup Checklist
 - [ ] Create a persistent GameObject with `DialogueManager` + `DialogueHistory`
@@ -782,7 +806,7 @@ Auto-scans for NPCs in `WaitingForCheckout` state. Enables/disables button + upd
 - [ ] Create a response button prefab (Button + TextMeshProUGUI child)
 - [ ] Add a history panel with ScrollRect + TextMeshProUGUI
 - [ ] On each NPC: add `NPCDialogueTrigger`, assign dialogue JSON files
-- [ ] On computer screen: add a "Talk to Customer" Button with `ComputerDialogueButton` component
+- [ ] Inside `npcInfoPanel`: add a Button with `NPCInfoTalkButton` component
 
 ---
 

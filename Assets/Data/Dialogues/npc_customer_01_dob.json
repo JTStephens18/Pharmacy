@@ -1,0 +1,60 @@
+{
+    "dialogueId": "npc_customer_01_dob",
+    "speakerName": "Customer",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "You need to verify my date of birth?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Yes, can you confirm it for me please?",
+                    "nextNodeId": "confirm"
+                },
+                {
+                    "text": "Just a routine check, it's standard procedure.",
+                    "nextNodeId": "routine"
+                }
+            ]
+        },
+        {
+            "id": "confirm",
+            "text": "Sure, it should match what's on my ID card. Go ahead and check.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches, thank you.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Hmm, the date doesn't seem to match our records.",
+                    "nextNodeId": "mismatch"
+                }
+            ]
+        },
+        {
+            "id": "routine",
+            "text": "No problem, I understand. Everything should be in order.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "mismatch",
+            "text": "That's odd... Are you sure? I've had that same ID for years. Let me take another look.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "You're right, my mistake. It does match after all.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Great, glad that's sorted. Anything else you need?",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -1,5 +1,20 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+/// <summary>
+/// Maps a string key to a dialogue file. Used by NPCInfoTalkButton to trigger
+/// different dialogue trees from different buttons in the NPCInfoPanel.
+/// </summary>
+[Serializable]
+public class InfoDialogueEntry
+{
+    [Tooltip("Key that NPCInfoTalkButton uses to select this dialogue (e.g. 'verify_id', 'dob', 'prescription').")]
+    public string key;
+
+    [Tooltip("The dialogue JSON file for this key.")]
+    public TextAsset dialogueFile;
+}
 
 /// <summary>
 /// Attach to an NPC alongside NPCInteractionController.
@@ -13,6 +28,9 @@ public class NPCDialogueTrigger : MonoBehaviour
     [Header("Dialogue Data")]
     [Tooltip("JSON dialogue files for this NPC. Cycles through them for repeat conversations.")]
     [SerializeField] private TextAsset[] dialogueFiles;
+
+    [Tooltip("Keyed dialogue files triggered from NPCInfoPanel buttons. Each entry maps a key to a dialogue file.")]
+    [SerializeField] private InfoDialogueEntry[] infoDialogues;
 
     [Header("Player Detection")]
     [Tooltip("Maximum distance to the player for dialogue to trigger automatically.")]
@@ -38,9 +56,23 @@ public class NPCDialogueTrigger : MonoBehaviour
     private DialogueData _loadedData;
     private Dictionary<string, DialogueNode> _loadedLookup;
 
+    // Runtime lookup for info dialogues
+    private Dictionary<string, TextAsset> _infoDialogueLookup;
+
     void Awake()
     {
         _npcController = GetComponent<NPCInteractionController>();
+
+        // Build lookup from serialized array
+        _infoDialogueLookup = new Dictionary<string, TextAsset>();
+        if (infoDialogues != null)
+        {
+            foreach (InfoDialogueEntry entry in infoDialogues)
+            {
+                if (string.IsNullOrEmpty(entry.key) || entry.dialogueFile == null) continue;
+                _infoDialogueLookup[entry.key] = entry.dialogueFile;
+            }
+        }
     }
 
     void Start()
@@ -99,6 +131,45 @@ public class NPCDialogueTrigger : MonoBehaviour
         // Advance to next dialogue file (cycle)
         _dialogueIndex = (_dialogueIndex + 1) % dialogueFiles.Length;
         LoadAndStartDialogue(_dialogueIndex);
+    }
+
+    /// <summary>
+    /// Start an info-specific dialogue by key (triggered from NPCInfoTalkButton).
+    /// Looks up the key in the infoDialogues list. Falls back to StartNewConversation
+    /// if the key is not found.
+    /// </summary>
+    public void StartInfoDialogue(string key)
+    {
+        if (_dialogueInProgress)
+        {
+            DebugLog("[NPCDialogueTrigger] Dialogue already in progress.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(key) || _infoDialogueLookup == null || !_infoDialogueLookup.TryGetValue(key, out TextAsset dialogueFile))
+        {
+            Debug.LogWarning($"[NPCDialogueTrigger] No info dialogue found for key '{key}'. Falling back to StartNewConversation.");
+            StartNewConversation();
+            return;
+        }
+
+        _loadedData = DialogueLoader.Load(dialogueFile, out _loadedLookup);
+        if (_loadedData == null || _loadedLookup == null) return;
+
+        string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
+
+        _dialogueInProgress = true;
+        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
+
+        DebugLog($"[NPCDialogueTrigger] Started info dialogue '{_loadedData.dialogueId}' (key: '{key}')");
+    }
+
+    /// <summary>
+    /// Whether this NPC has an info dialogue registered for the given key.
+    /// </summary>
+    public bool HasInfoDialogue(string key)
+    {
+        return !string.IsNullOrEmpty(key) && _infoDialogueLookup != null && _infoDialogueLookup.ContainsKey(key);
     }
 
     /// <summary>

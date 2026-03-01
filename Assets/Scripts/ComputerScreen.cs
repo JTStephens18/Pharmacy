@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,6 +34,8 @@ public class ComputerScreen : MonoBehaviour
 
     private bool _isActive;
     private GraphicRaycaster _raycaster;
+    private bool _suppressDeactivation;
+    private Action _onTemporaryExitComplete;
 
     public bool IsActive => _isActive;
 
@@ -121,6 +124,15 @@ public class ComputerScreen : MonoBehaviour
     /// </summary>
     private void OnFocusExited()
     {
+        if (_suppressDeactivation)
+        {
+            _suppressDeactivation = false;
+            Action cb = _onTemporaryExitComplete;
+            _onTemporaryExitComplete = null;
+            cb?.Invoke();
+            return;
+        }
+
         Deactivate();
     }
 
@@ -145,6 +157,51 @@ public class ComputerScreen : MonoBehaviour
         {
             FocusStateManager.Instance.ExitFocus();
         }
+    }
+
+    /// <summary>
+    /// Temporarily exits computer focus to allow dialogue, without fully deactivating.
+    /// The onComplete callback fires after the exit transition finishes.
+    /// </summary>
+    public void TemporaryExitForDialogue(Action onComplete)
+    {
+        if (!_isActive) return;
+
+        _suppressDeactivation = true;
+        _onTemporaryExitComplete = onComplete;
+
+        // Stop UI from receiving clicks during the transition
+        if (_raycaster != null)
+            _raycaster.enabled = false;
+
+        FocusStateManager.Instance.ExitFocus();
+    }
+
+    /// <summary>
+    /// Re-enters computer focus after a temporary dialogue exit.
+    /// Does not reset views or call full Activate() — preserves current UI state.
+    /// </summary>
+    public void ReactivateAfterDialogue()
+    {
+        if (!_isActive) return;
+
+        EnsureEventCamera();
+        FocusStateManager.Instance.EnterFocus(focusCameraTarget, OnFocusExited);
+
+        // Re-enable the raycaster once the focus transition completes
+        if (FocusStateManager.Instance != null)
+            FocusStateManager.Instance.OnFocusChanged += OnReactivateFocusChanged;
+    }
+
+    private void OnReactivateFocusChanged(bool entered)
+    {
+        if (!entered) return;
+
+        // Unsubscribe — this is a one-shot listener
+        FocusStateManager.Instance.OnFocusChanged -= OnReactivateFocusChanged;
+
+        if (_raycaster != null)
+            _raycaster.enabled = true;
     }
 
     /// <summary>

@@ -62,6 +62,7 @@ public class DialogueManager : MonoBehaviour
     private Transform _lookAtTarget;
     private Coroutine _cameraLerpCoroutine;
     private string _speakerNameOverride;
+    private bool _suppressEndDialogueReset;
 
     /// <summary>Whether a dialogue is currently being displayed.</summary>
     public bool IsActive => _isActive;
@@ -176,6 +177,17 @@ public class DialogueManager : MonoBehaviour
     }
 
     /// <summary>
+    /// When true, EndDialogue will skip relocking the cursor and re-enabling
+    /// MouseLook/PlayerMovement. Used when focus will immediately re-enter
+    /// (e.g. returning to the computer screen after dialogue).
+    /// Automatically cleared after EndDialogue runs.
+    /// </summary>
+    public void SetSuppressEndReset(bool suppress)
+    {
+        _suppressEndDialogueReset = suppress;
+    }
+
+    /// <summary>
     /// End the current dialogue and hide the overlay.
     /// </summary>
     public void EndDialogue()
@@ -203,24 +215,28 @@ public class DialogueManager : MonoBehaviour
         // Clear spawned buttons
         ClearResponseButtons();
 
-        // Relock cursor
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // Sync MouseLook pitch to current camera angle and re-enable
-        if (MouseLook.Instance != null)
+        if (!_suppressEndDialogueReset)
         {
-            // Normalize pitch from 0-360 to -180-180 range
-            float pitch = MouseLook.Instance.transform.localEulerAngles.x;
-            if (pitch > 180f) pitch -= 360f;
-            MouseLook.Instance.SetCurrentPitch(pitch);
-            MouseLook.Instance.enabled = true;
-        }
+            // Relock cursor
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
 
-        // Re-enable player movement
-        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
-        if (playerMovement != null)
-            playerMovement.enabled = true;
+            // Sync MouseLook pitch to current camera angle and re-enable
+            if (MouseLook.Instance != null)
+            {
+                // Normalize pitch from 0-360 to -180-180 range
+                float pitch = MouseLook.Instance.transform.localEulerAngles.x;
+                if (pitch > 180f) pitch -= 360f;
+                MouseLook.Instance.SetCurrentPitch(pitch);
+                MouseLook.Instance.enabled = true;
+            }
+
+            // Re-enable player movement
+            PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
+            if (playerMovement != null)
+                playerMovement.enabled = true;
+        }
+        _suppressEndDialogueReset = false;
 
         Debug.Log("[DialogueManager] Dialogue ended.");
 
