@@ -211,9 +211,8 @@ public class IDCardInteraction : MonoBehaviour
     {
         if (_cachedCamera != null) return _cachedCamera;
 
-        _cachedCamera = Camera.main;
-        if (_cachedCamera == null)
-            _cachedCamera = FindFirstObjectByType<Camera>();
+        PlayerComponents pc = PlayerComponents.Local;
+        _cachedCamera = pc != null ? pc.PlayerCamera : null;
 
         return _cachedCamera;
     }
@@ -283,9 +282,11 @@ public class IDCardInteraction : MonoBehaviour
     {
         if (_isActive) return;
 
-        if (FocusStateManager.Instance == null)
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        if (focus == null)
         {
-            Debug.LogError("[IDCardInteraction] Cannot activate: FocusStateManager not found!");
+            Debug.LogError("[IDCardInteraction] Cannot activate: PlayerComponents or FocusStateManager not found!");
             return;
         }
 
@@ -300,14 +301,12 @@ public class IDCardInteraction : MonoBehaviour
         _isHovering = false;
 
         // Cache the camera before focus mode changes it
-        _cachedCamera = Camera.main;
-        if (_cachedCamera == null)
-            _cachedCamera = FindFirstObjectByType<Camera>();
+        _cachedCamera = pc.PlayerCamera;
 
         Debug.Log("[IDCardInteraction] Activating — entering focus mode on ID card.");
 
         // Enter focus mode (disables FPS controls, transitions camera)
-        FocusStateManager.Instance.EnterFocus(_focusCameraTarget, OnFocusExited);
+        focus.EnterFocus(_focusCameraTarget, OnFocusExited);
     }
 
     /// <summary>
@@ -332,9 +331,11 @@ public class IDCardInteraction : MonoBehaviour
         Debug.Log("[IDCardInteraction] Deactivating — exiting ID card focus.");
 
         // Exit focus if still focused
-        if (FocusStateManager.Instance != null && FocusStateManager.Instance.IsFocused)
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        if (focus != null && focus.IsFocused)
         {
-            FocusStateManager.Instance.ExitFocus();
+            focus.ExitFocus();
         }
 
         _cachedCamera = null;

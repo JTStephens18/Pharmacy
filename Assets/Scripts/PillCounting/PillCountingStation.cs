@@ -47,10 +47,11 @@ public class PillCountingStation : MonoBehaviour
         if (_isActive) return;
 
         // --- Validate prerequisites BEFORE doing anything ---
-        if (FocusStateManager.Instance == null)
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        if (focus == null)
         {
-            Debug.LogError("[PillCountingStation] Cannot activate: FocusStateManager not found! " +
-                "Add a FocusStateManager component to any GameObject in the scene (e.g., the Player).");
+            Debug.LogError("[PillCountingStation] Cannot activate: PlayerComponents or FocusStateManager not found!");
             return;
         }
 
@@ -66,7 +67,7 @@ public class PillCountingStation : MonoBehaviour
         Debug.Log($"[PillCountingStation] Activating with target: {targetPillCount} pills.");
 
         // Enter focus mode FIRST (disables FPS controls, transitions camera)
-        FocusStateManager.Instance.EnterFocus(focusCameraTarget, OnFocusExited);
+        focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
         // Enable mini-game components
         SetMiniGameActive(true);
@@ -155,9 +156,11 @@ public class PillCountingStation : MonoBehaviour
         SetMiniGameActive(false);
 
         // Make sure focus is exited (in case Deactivate was called directly)
-        if (FocusStateManager.Instance != null && FocusStateManager.Instance.IsFocused)
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        if (focus != null && focus.IsFocused)
         {
-            FocusStateManager.Instance.ExitFocus();
+            focus.ExitFocus();
         }
     }
 

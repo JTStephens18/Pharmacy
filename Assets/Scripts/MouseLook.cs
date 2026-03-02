@@ -40,12 +40,8 @@ public class MouseLook : MonoBehaviour
     private float _shakeIntensity = 0f;
     private Vector3 _shakeOffset = Vector3.zero;
 
-    // Singleton for easy access
-    public static MouseLook Instance { get; private set; }
-
     void Awake()
     {
-        Instance = this;
     }
 
     void Start()

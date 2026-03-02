@@ -10,14 +10,12 @@ using UnityEngine;
 /// </summary>
 public class FocusStateManager : MonoBehaviour
 {
-    public static FocusStateManager Instance { get; private set; }
-
     /// <summary>
     /// Fired when focus state changes. True = entered focus, False = exited focus.
     /// </summary>
     public event Action<bool> OnFocusChanged;
 
-    [Header("References (auto-found if left empty)")]
+    [Header("References (auto-found from PlayerComponents if left empty)")]
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private MouseLook mouseLook;
     [SerializeField] private ObjectPickup objectPickup;
@@ -47,40 +45,20 @@ public class FocusStateManager : MonoBehaviour
     public bool IsFocused => _isFocused;
     public bool IsTransitioning => _isTransitioning;
 
-    void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-    }
-
     void Start()
     {
-        // Auto-find references if not assigned in Inspector
+        // Auto-find references from PlayerComponents if not assigned in Inspector
+        PlayerComponents pc = GetComponent<PlayerComponents>();
+        if (pc == null) pc = GetComponentInParent<PlayerComponents>();
+
         if (playerMovement == null)
-            playerMovement = FindFirstObjectByType<PlayerMovement>();
+            playerMovement = pc != null ? pc.Movement : GetComponentInParent<PlayerMovement>();
         if (mouseLook == null)
-            mouseLook = FindFirstObjectByType<MouseLook>();
+            mouseLook = pc != null ? pc.Look : GetComponentInChildren<MouseLook>();
         if (objectPickup == null)
-            objectPickup = FindFirstObjectByType<ObjectPickup>();
+            objectPickup = pc != null ? pc.Pickup : GetComponentInChildren<ObjectPickup>();
 
-        // Find the main camera with multiple fallbacks
-        _mainCamera = Camera.main;
-
-        // Fallback: use the camera on the same object as MouseLook
-        if (_mainCamera == null && mouseLook != null)
-            _mainCamera = mouseLook.GetComponent<Camera>();
-
-        // Fallback: use the camera on the same object as ObjectPickup
-        if (_mainCamera == null && objectPickup != null)
-            _mainCamera = objectPickup.GetComponent<Camera>();
-
-        // Fallback: find any camera in the scene
-        if (_mainCamera == null)
-            _mainCamera = FindFirstObjectByType<Camera>();
+        _mainCamera = pc != null ? pc.PlayerCamera : GetComponentInChildren<Camera>();
 
         if (_mainCamera != null)
         {
@@ -88,8 +66,8 @@ public class FocusStateManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[FocusStateManager] Could not find any Camera in the scene! " +
-                "Make sure your camera has the 'MainCamera' tag, or assign references manually.");
+            Debug.LogError("[FocusStateManager] Could not find Camera on player hierarchy! " +
+                "Ensure PlayerComponents is on the Player root, or assign references manually.");
         }
     }
 

@@ -27,6 +27,7 @@ public class ObjectPickup : MonoBehaviour
     [SerializeField] private bool showDebugRay = true;
 
     private Camera _playerCamera;
+    private PlayerComponents _playerComponents;
     private GameObject _heldObject;
     private Rigidbody _heldRigidbody;
     private Collider _heldCollider;
@@ -43,11 +44,11 @@ public class ObjectPickup : MonoBehaviour
 
     void Start()
     {
+        _playerComponents = GetComponentInParent<PlayerComponents>();
+
         _playerCamera = GetComponent<Camera>();
-        if (_playerCamera == null)
-        {
-            _playerCamera = Camera.main;
-        }
+        if (_playerCamera == null && _playerComponents != null)
+            _playerCamera = _playerComponents.PlayerCamera;
     }
 
     void Update()
@@ -101,10 +102,10 @@ public class ObjectPickup : MonoBehaviour
                 }
             }
             // Check if we're in box-to-shelf placement mode
-            else if (ItemPlacementManager.Instance != null && ItemPlacementManager.Instance.IsPlacementReady())
+            else if (_playerComponents != null && _playerComponents.PlacementManager != null && _playerComponents.PlacementManager.IsPlacementReady())
             {
                 // Place from inventory box onto shelf
-                ItemPlacementManager.Instance.TryPlaceFromBox();
+                _playerComponents.PlacementManager.TryPlaceFromBox();
             }
             // Place on shelf instead of dropping
             // BUT: Don't place the inventory box itself on a shelf (that's accidental)
@@ -115,9 +116,9 @@ public class ObjectPickup : MonoBehaviour
             else if (_currentPlaceable != null && !_currentPlaceable.CanPlaceItem(_heldObject))
             {
                 // Trying to place on a slot that rejects the item - shake feedback
-                if (MouseLook.Instance != null)
+                if (_playerComponents != null && _playerComponents.Look != null)
                 {
-                    MouseLook.Instance.Shake();
+                    _playerComponents.Look.Shake();
                 }
                 Debug.Log("[ObjectPickup] Cannot place item here - wrong category or slot full");
             }

@@ -19,6 +19,7 @@ A first-person pharmacy simulator where the player manages a shop: restocking sh
 
 ```
 Assets/Scripts/
+├── PlayerComponents.cs        # Central hub for all player component references
 ├── PlayerMovement.cs          # FPS movement + jumping
 ├── MouseLook.cs               # FPS camera look + screen shake
 ├── ObjectPickup.cs            # Central interaction hub (pickup, throw, place, interact)
@@ -95,8 +96,26 @@ Attached to the **Player** GameObject (requires `CharacterController`).
 
 **Inspector fields**: `walkSpeed`, `sprintSpeed`, `jumpHeight`, `gravity`, `groundCheck` (Transform), `groundMask` (LayerMask).
 
+### PlayerComponents.cs
+Attached to the **Player** root GameObject. Central hub that holds references to all player-owned components, replacing scattered singletons and `FindFirstObjectByType` calls.
+
+| Property | Type | Auto-found From |
+|---|---|---|
+| `Local` (static) | `PlayerComponents` | Set in `Awake()` — the local player instance |
+| `Movement` | `PlayerMovement` | `GetComponent` on Player root |
+| `Look` | `MouseLook` | `GetComponentInChildren` (Camera child) |
+| `Pickup` | `ObjectPickup` | `GetComponentInChildren` (Camera child) |
+| `PlacementManager` | `ItemPlacementManager` | `GetComponentInChildren` |
+| `FocusState` | `FocusStateManager` | `GetComponent` on Player root |
+| `PlayerCamera` | `Camera` | `GetComponentInChildren` (Camera child) |
+
+**Usage from player-owned scripts**: `GetComponentInParent<PlayerComponents>()`
+**Usage from world objects**: `PlayerComponents.Local.FocusState`, `PlayerComponents.Local.PlayerCamera`, etc.
+
+**Editor setup**: Add `PlayerComponents` component to the Player root GameObject. No inspector fields needed — all references are auto-found from the player hierarchy.
+
 ### MouseLook.cs
-Attached to the **Camera** (child of Player). Singleton (`MouseLook.Instance`).
+Attached to the **Camera** (child of Player). Accessed via `PlayerComponents.Look`.
 
 | Feature | Details |
 |---|---|
@@ -109,10 +128,10 @@ Attached to the **Camera** (child of Player). Singleton (`MouseLook.Instance`).
 
 ---
 
-## System 2: Focus State Manager (Singleton)
+## System 2: Focus State Manager
 
-**Script**: `FocusStateManager.cs` — Attach to Player or any persistent GameObject.  
-**Singleton**: `FocusStateManager.Instance`
+**Script**: `FocusStateManager.cs` — Attach to the **Player** root GameObject.
+**Access**: `PlayerComponents.Local.FocusState` (or `GetComponentInParent<PlayerComponents>().FocusState` from player scripts)
 
 Manages transitions between **FPS mode** and **focused mode** (computer screen, pill counting). When entering focus:
 
@@ -122,15 +141,15 @@ Manages transitions between **FPS mode** and **focused mode** (computer screen, 
 4. Lerps camera to target Transform over `transitionDuration` (0.6s)
 5. On exit (Escape key): reverse lerps camera back, re-parents, re-enables FPS scripts
 
-**API**:
+**API** (via PlayerComponents):
 ```csharp
-FocusStateManager.Instance.EnterFocus(Transform target, Action onExit);
-FocusStateManager.Instance.ExitFocus();
+PlayerComponents.Local.FocusState.EnterFocus(Transform target, Action onExit);
+PlayerComponents.Local.FocusState.ExitFocus();
 ```
 
 **Events**: `OnFocusChanged(bool entering)` — subscribe for custom focus reactions.
 
-**Auto-finds** at Start: `PlayerMovement`, `MouseLook`, `ObjectPickup`, `Camera.main` (with fallbacks).
+**Auto-finds** at Start: `PlayerMovement`, `MouseLook`, `ObjectPickup`, `Camera` from the `PlayerComponents` on the same hierarchy.
 
 ---
 
@@ -655,11 +674,12 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 
 ### Player Setup
 - [ ] Player GameObject with `CharacterController`
+- [ ] `PlayerComponents` on Player root (auto-finds all player components)
 - [ ] `PlayerMovement` on Player root
 - [ ] Camera as child of Player with `MouseLook` (assign `playerBody` = Player root)
 - [ ] `ObjectPickup` on Camera (assign `playerCamera`, `holdPoint`)
 - [ ] `ItemPlacementManager` on Camera or Player (assign `ghostMaterial`)
-- [ ] `FocusStateManager` on Player (auto-finds everything)
+- [ ] `FocusStateManager` on Player (auto-finds references from PlayerComponents)
 
 ### Shelf Setup
 - [ ] Shelf parent with `ShelfSection` (auto-finds child slots)
@@ -810,12 +830,22 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 
 ---
 
-## Key Singletons
+## Key Access Patterns
 
+### PlayerComponents (per-player hub)
+| Component | Access | Purpose |
+|---|---|---|
+| `PlayerComponents.Local` | Static | The local player's component hub |
+| `.FocusState` | Via hub | Camera transitions, FPS control toggling |
+| `.Look` | Via hub | Screen shake, sensitivity adjustment |
+| `.Movement` | Via hub | Player movement control |
+| `.Pickup` | Via hub | Object pickup and interaction |
+| `.PlacementManager` | Via hub | Box-to-shelf item placement |
+| `.PlayerCamera` | Via hub | The player's camera |
+
+### Remaining Singletons (scene-global, not per-player)
 | Singleton | Access | Purpose |
 |---|---|---|
-| `FocusStateManager.Instance` | Static | Camera transitions, FPS control toggling |
-| `MouseLook.Instance` | Static | Screen shake, sensitivity adjustment |
 | `DialogueManager.Instance` | Static | Dialogue UI overlay, response handling |
 | `NPCInfoDisplay.Instance` | Static | Populates computer UI with scanned NPC data |
 

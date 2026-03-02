@@ -77,10 +77,10 @@ public class ComputerScreen : MonoBehaviour
         if (_isActive) return;
 
         // --- Validate prerequisites ---
-        if (FocusStateManager.Instance == null)
+        FocusStateManager focus = GetFocusManager();
+        if (focus == null)
         {
-            Debug.LogError("[ComputerScreen] Cannot activate: FocusStateManager not found! " +
-                "Add a FocusStateManager component to any GameObject in the scene.");
+            Debug.LogError("[ComputerScreen] Cannot activate: PlayerComponents or FocusStateManager not found!");
             return;
         }
 
@@ -96,7 +96,7 @@ public class ComputerScreen : MonoBehaviour
         Debug.Log("[ComputerScreen] Activating — entering focus mode.");
 
         // Ensure the World Space Canvas has an Event Camera — this MUST happen
-        // here (not Awake) because Camera.main may not exist during Awake.
+        // here (not Awake) because the camera may not exist during Awake.
         EnsureEventCamera();
 
         // Check for EventSystem (required for any UI interaction)
@@ -105,7 +105,7 @@ public class ComputerScreen : MonoBehaviour
                 "Add one via: GameObject → UI → Event System.");
 
         // Enter focus mode (disables FPS controls, transitions camera)
-        FocusStateManager.Instance.EnterFocus(focusCameraTarget, OnFocusExited);
+        focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
         // Enable UI interaction and show main view
         SetInteractive(true);
@@ -153,9 +153,10 @@ public class ComputerScreen : MonoBehaviour
             controller.HideAll();
 
         // Make sure focus is exited (in case Deactivate was called directly)
-        if (FocusStateManager.Instance != null && FocusStateManager.Instance.IsFocused)
+        FocusStateManager focus = GetFocusManager();
+        if (focus != null && focus.IsFocused)
         {
-            FocusStateManager.Instance.ExitFocus();
+            focus.ExitFocus();
         }
     }
 
@@ -174,7 +175,9 @@ public class ComputerScreen : MonoBehaviour
         if (_raycaster != null)
             _raycaster.enabled = false;
 
-        FocusStateManager.Instance.ExitFocus();
+        FocusStateManager focus = GetFocusManager();
+        if (focus != null)
+            focus.ExitFocus();
     }
 
     /// <summary>
@@ -185,12 +188,14 @@ public class ComputerScreen : MonoBehaviour
     {
         if (!_isActive) return;
 
+        FocusStateManager focus = GetFocusManager();
+        if (focus == null) return;
+
         EnsureEventCamera();
-        FocusStateManager.Instance.EnterFocus(focusCameraTarget, OnFocusExited);
+        focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
         // Re-enable the raycaster once the focus transition completes
-        if (FocusStateManager.Instance != null)
-            FocusStateManager.Instance.OnFocusChanged += OnReactivateFocusChanged;
+        focus.OnFocusChanged += OnReactivateFocusChanged;
     }
 
     private void OnReactivateFocusChanged(bool entered)
@@ -198,15 +203,26 @@ public class ComputerScreen : MonoBehaviour
         if (!entered) return;
 
         // Unsubscribe — this is a one-shot listener
-        FocusStateManager.Instance.OnFocusChanged -= OnReactivateFocusChanged;
+        FocusStateManager focus = GetFocusManager();
+        if (focus != null)
+            focus.OnFocusChanged -= OnReactivateFocusChanged;
 
         if (_raycaster != null)
             _raycaster.enabled = true;
     }
 
     /// <summary>
+    /// Gets the FocusStateManager from the local player.
+    /// </summary>
+    private FocusStateManager GetFocusManager()
+    {
+        PlayerComponents pc = PlayerComponents.Local;
+        return pc != null ? pc.FocusState : null;
+    }
+
+    /// <summary>
     /// Ensures the World Space Canvas has a valid Event Camera.
-    /// Called at activation time because Camera.main may be null during Awake.
+    /// Called at activation time because the camera may not exist during Awake.
     /// </summary>
     private void EnsureEventCamera()
     {
@@ -215,12 +231,8 @@ public class ComputerScreen : MonoBehaviour
         // Already assigned and valid?
         if (screenCanvas.worldCamera != null) return;
 
-        // Try Camera.main first
-        Camera cam = Camera.main;
-
-        // Fallback: find any camera in the scene
-        if (cam == null)
-            cam = FindFirstObjectByType<Camera>();
+        PlayerComponents pc = PlayerComponents.Local;
+        Camera cam = pc != null ? pc.PlayerCamera : null;
 
         if (cam != null)
         {
@@ -229,7 +241,7 @@ public class ComputerScreen : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[ComputerScreen] Cannot find any camera for World Space Canvas! " +
+            Debug.LogError("[ComputerScreen] Cannot find player camera for World Space Canvas! " +
                 "Button clicks will not work.");
         }
     }

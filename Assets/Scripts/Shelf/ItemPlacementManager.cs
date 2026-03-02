@@ -68,25 +68,18 @@ public class ItemPlacementManager : MonoBehaviour
     private HashSet<ShelfSection> _previousShelfSet = new HashSet<ShelfSection>();
     private bool _wasNearShelves = false;
 
-    // Singleton for easy access
-    public static ItemPlacementManager Instance { get; private set; }
-
-    private void Awake()
-    {
-        Instance = this;
-    }
-
     private void Start()
     {
-        _playerCamera = Camera.main;
-        if (_playerCamera == null)
-            _playerCamera = FindFirstObjectByType<Camera>();
+        // Resolve references from the player hierarchy
+        PlayerComponents pc = GetComponentInParent<PlayerComponents>();
+
+        _playerCamera = pc != null ? pc.PlayerCamera : GetComponentInParent<Camera>();
 
         if (objectPickup == null)
         {
             objectPickup = GetComponent<ObjectPickup>();
-            if (objectPickup == null)
-                objectPickup = FindFirstObjectByType<ObjectPickup>();
+            if (objectPickup == null && pc != null)
+                objectPickup = pc.Pickup;
         }
     }
 
@@ -94,9 +87,8 @@ public class ItemPlacementManager : MonoBehaviour
     {
         if (_playerCamera == null)
         {
-            _playerCamera = Camera.main;
-            if (_playerCamera == null)
-                _playerCamera = FindFirstObjectByType<Camera>();
+            PlayerComponents pc = GetComponentInParent<PlayerComponents>();
+            _playerCamera = pc != null ? pc.PlayerCamera : GetComponentInParent<Camera>();
         }
         return _playerCamera;
     }
@@ -403,8 +395,9 @@ public class ItemPlacementManager : MonoBehaviour
             Destroy(itemInstance);
 
             // Trigger screen shake
-            if (MouseLook.Instance != null)
-                MouseLook.Instance.Shake();
+            PlayerComponents pc = GetComponentInParent<PlayerComponents>();
+            if (pc != null && pc.Look != null)
+                pc.Look.Shake();
 
             return false;
         }

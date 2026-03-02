@@ -143,15 +143,14 @@ public class DialogueManager : MonoBehaviour
         Cursor.visible = true;
 
         // Disable camera look and player movement during dialogue
-        if (MouseLook.Instance != null)
-            MouseLook.Instance.enabled = false;
-
-        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
-        if (playerMovement != null)
-            playerMovement.enabled = false;
+        PlayerComponents pc = PlayerComponents.Local;
+        if (pc != null && pc.Look != null)
+            pc.Look.enabled = false;
+        if (pc != null && pc.Movement != null)
+            pc.Movement.enabled = false;
 
         // Smoothly look at NPC
-        if (_lookAtTarget != null && MouseLook.Instance != null)
+        if (_lookAtTarget != null && pc != null && pc.Look != null)
         {
             if (_cameraLerpCoroutine != null)
                 StopCoroutine(_cameraLerpCoroutine);
@@ -222,19 +221,19 @@ public class DialogueManager : MonoBehaviour
             Cursor.visible = false;
 
             // Sync MouseLook pitch to current camera angle and re-enable
-            if (MouseLook.Instance != null)
+            PlayerComponents pc = PlayerComponents.Local;
+            if (pc != null && pc.Look != null)
             {
                 // Normalize pitch from 0-360 to -180-180 range
-                float pitch = MouseLook.Instance.transform.localEulerAngles.x;
+                float pitch = pc.Look.transform.localEulerAngles.x;
                 if (pitch > 180f) pitch -= 360f;
-                MouseLook.Instance.SetCurrentPitch(pitch);
-                MouseLook.Instance.enabled = true;
+                pc.Look.SetCurrentPitch(pitch);
+                pc.Look.enabled = true;
             }
 
             // Re-enable player movement
-            PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
-            if (playerMovement != null)
-                playerMovement.enabled = true;
+            if (pc != null && pc.Movement != null)
+                pc.Movement.enabled = true;
         }
         _suppressEndDialogueReset = false;
 
@@ -250,7 +249,10 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     private IEnumerator LerpCameraToTarget()
     {
-        MouseLook ml = MouseLook.Instance;
+        PlayerComponents pc = PlayerComponents.Local;
+        if (pc == null || pc.Look == null) yield break;
+
+        MouseLook ml = pc.Look;
         Transform cam = ml.transform;
         Transform body = ml.PlayerBody;
 

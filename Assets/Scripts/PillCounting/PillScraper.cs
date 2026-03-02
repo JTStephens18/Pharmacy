@@ -102,9 +102,9 @@ public class PillScraper : MonoBehaviour
         if (_trayCenter == Vector3.zero)
             _trayCenter = transform.parent != null ? transform.parent.position : transform.position;
 
-        // Find the camera
-        _camera = Camera.main;
-        if (_camera == null) _camera = FindFirstObjectByType<Camera>();
+        // Find the camera from the local player
+        PlayerComponents pc = PlayerComponents.Local;
+        _camera = pc != null ? pc.PlayerCamera : null;
 
         // Create a horizontal plane at the tray surface height for mouse raycasting
         _trayPlane = new Plane(Vector3.up, new Vector3(0f, _trayCenter.y, 0f));
@@ -133,7 +133,8 @@ public class PillScraper : MonoBehaviour
     void Update()
     {
         // Don't process any movement until focus mode is fully active
-        var focus = FocusStateManager.Instance;
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
         if (focus == null || !focus.IsFocused || focus.IsTransitioning)
             return;
 

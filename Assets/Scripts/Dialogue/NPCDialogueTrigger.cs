@@ -77,12 +77,12 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     void Start()
     {
-        // Find player
-        PlayerMovement player = FindFirstObjectByType<PlayerMovement>();
-        if (player != null)
-            _playerTransform = player.transform;
+        // Find player via PlayerComponents
+        PlayerComponents pc = PlayerComponents.Local;
+        if (pc != null && pc.Movement != null)
+            _playerTransform = pc.Movement.transform;
         else
-            Debug.LogWarning("[NPCDialogueTrigger] Could not find PlayerMovement in scene.");
+            Debug.LogWarning("[NPCDialogueTrigger] Could not find PlayerComponents/PlayerMovement in scene.");
 
         // Subscribe to dialogue end events
         if (DialogueManager.Instance != null)
@@ -196,7 +196,9 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (dialogueFiles == null || dialogueFiles.Length == 0) return false;
 
         // Don't trigger if player is in a focused mode (computer, pill station, etc.)
-        if (FocusStateManager.Instance != null && (FocusStateManager.Instance.IsFocused || FocusStateManager.Instance.IsTransitioning))
+        PlayerComponents pc = PlayerComponents.Local;
+        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        if (focus != null && (focus.IsFocused || focus.IsTransitioning))
             return false;
 
         // Check NPC state

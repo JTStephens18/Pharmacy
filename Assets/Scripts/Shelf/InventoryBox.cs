@@ -196,7 +196,8 @@ public class InventoryBox : MonoBehaviour
         transform.localScale = Vector3.zero;
 
         // Force drop if player is holding this box
-        ObjectPickup pickup = FindFirstObjectByType<ObjectPickup>();
+        PlayerComponents pc = PlayerComponents.Local;
+        ObjectPickup pickup = pc != null ? pc.Pickup : null;
         if (pickup != null && pickup.GetHeldObject() == gameObject)
         {
             pickup.ForceDropObject();
