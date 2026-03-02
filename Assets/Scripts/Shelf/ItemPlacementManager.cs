@@ -79,6 +79,8 @@ public class ItemPlacementManager : MonoBehaviour
     private void Start()
     {
         _playerCamera = Camera.main;
+        if (_playerCamera == null)
+            _playerCamera = FindFirstObjectByType<Camera>();
 
         if (objectPickup == null)
         {
@@ -86,6 +88,17 @@ public class ItemPlacementManager : MonoBehaviour
             if (objectPickup == null)
                 objectPickup = FindFirstObjectByType<ObjectPickup>();
         }
+    }
+
+    private Camera GetPlayerCamera()
+    {
+        if (_playerCamera == null)
+        {
+            _playerCamera = Camera.main;
+            if (_playerCamera == null)
+                _playerCamera = FindFirstObjectByType<Camera>();
+        }
+        return _playerCamera;
     }
 
     private void Update()
@@ -452,10 +465,11 @@ public class ItemPlacementManager : MonoBehaviour
     /// </summary>
     private List<ShelfSection> DetectNearbyShelfSections()
     {
-        if (_playerCamera == null) return new List<ShelfSection>();
+        Camera cam = GetPlayerCamera();
+        if (cam == null) return new List<ShelfSection>();
 
         Collider[] colliders = Physics.OverlapSphere(
-            _playerCamera.transform.position,
+            cam.transform.position,
             shelfDetectionRange,
             shelfLayerMask
         );
@@ -477,7 +491,7 @@ public class ItemPlacementManager : MonoBehaviour
         }
 
         // Sort by distance for consistent ordering
-        Vector3 camPos = _playerCamera.transform.position;
+        Vector3 camPos = cam.transform.position;
         shelves.Sort((a, b) =>
             Vector3.Distance(camPos, a.transform.position)
                 .CompareTo(Vector3.Distance(camPos, b.transform.position)));
@@ -508,9 +522,10 @@ public class ItemPlacementManager : MonoBehaviour
 
     private ShelfSlot GetTargetedShelfSlot()
     {
-        if (_playerCamera == null) return null;
+        Camera cam = GetPlayerCamera();
+        if (cam == null) return null;
 
-        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
 
         if (Physics.Raycast(ray, out RaycastHit hit, shelfDetectionRange, shelfLayerMask))
         {
