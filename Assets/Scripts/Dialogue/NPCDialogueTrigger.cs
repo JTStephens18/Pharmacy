@@ -47,7 +47,6 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     // ── Runtime State ───────────────────────────────────────────────
     private NPCInteractionController _npcController;
-    private Transform _playerTransform;
     private bool _hasTriggeredInitialDialogue;
     private int _dialogueIndex;
     private bool _dialogueInProgress;
@@ -58,6 +57,12 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     // Runtime lookup for info dialogues
     private Dictionary<string, TextAsset> _infoDialogueLookup;
+
+    // Returns the nearest registered player transform each time it is accessed.
+    // Avoids the Start() timing problem where PlayerComponents.Local is null
+    // because the network player hasn't spawned yet.
+    private Transform PlayerTransform =>
+        PlayerRegistry.GetNearest(transform.position)?.Movement?.transform;
 
     void Awake()
     {
@@ -77,13 +82,6 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     void Start()
     {
-        // Find player via PlayerComponents
-        PlayerComponents pc = PlayerComponents.Local;
-        if (pc != null && pc.Movement != null)
-            _playerTransform = pc.Movement.transform;
-        else
-            Debug.LogWarning("[NPCDialogueTrigger] Could not find PlayerComponents/PlayerMovement in scene.");
-
         // Subscribe to dialogue end events
         if (DialogueManager.Instance != null)
         {
@@ -192,7 +190,8 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     private bool CanTriggerDialogue()
     {
-        if (_npcController == null || _playerTransform == null) return false;
+        Transform pt = PlayerTransform;
+        if (_npcController == null || pt == null) return false;
         if (dialogueFiles == null || dialogueFiles.Length == 0) return false;
 
         // Don't trigger if player is in a focused mode (computer, pill station, etc.)
@@ -206,7 +205,7 @@ public class NPCDialogueTrigger : MonoBehaviour
             return false;
 
         // Check player range
-        float distance = Vector3.Distance(transform.position, _playerTransform.position);
+        float distance = Vector3.Distance(transform.position, pt.position);
         if (distance > playerRange)
             return false;
 
@@ -223,10 +222,11 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     private bool HasLineOfSight()
     {
-        if (_playerTransform == null) return false;
+        Transform pt = PlayerTransform;
+        if (pt == null) return false;
 
         Vector3 origin = transform.position + Vector3.up * 1.5f; // Eye height
-        Vector3 target = _playerTransform.position + Vector3.up * 1.5f;
+        Vector3 target = pt.position + Vector3.up * 1.5f;
         Vector3 direction = target - origin;
         float distance = direction.magnitude;
 
@@ -234,7 +234,7 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (Physics.Raycast(origin, direction.normalized, out RaycastHit hit, distance, lineOfSightMask))
         {
             // Check if we hit the player
-            if (hit.transform == _playerTransform || hit.transform.IsChildOf(_playerTransform))
+            if (hit.transform == pt || hit.transform.IsChildOf(pt))
                 return true;
 
             DebugLog($"[NPCDialogueTrigger] LOS blocked by {hit.collider.gameObject.name}");

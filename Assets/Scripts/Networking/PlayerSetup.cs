@@ -17,6 +17,9 @@ public class PlayerSetup : NetworkBehaviour
         PlayerComponents pc = GetComponent<PlayerComponents>();
         Debug.Log($"[PlayerSetup] OnNetworkSpawn — IsOwner={IsOwner}, ClientId={OwnerClientId}, Camera={pc?.PlayerCamera}");
 
+        // Register every spawned player so world scripts can find the nearest player
+        PlayerRegistry.Register(OwnerClientId, pc);
+
         if (IsOwner)
         {
             // This is our local player — enable everything and register as Local
@@ -45,5 +48,10 @@ public class PlayerSetup : NetworkBehaviour
             AudioListener listener = pc.PlayerCamera.GetComponent<AudioListener>();
             if (listener != null) listener.enabled = false;
         }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        PlayerRegistry.Unregister(OwnerClientId);
     }
 }

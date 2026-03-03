@@ -858,3 +858,61 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 | `ItemCategory` | Create → NPC → Item Category | Defines item type with prefab and rotation offset |
 | `NPCIdentity` | Create → NPC → NPC Identity | Defines NPC personal data (name, DOB, address, ID#, photo) + optional ID card overrides (card name, card photo) |
 | `RoundConfig` | Create → NPC → Round Config | Defines NPC queue per round: pool of prefabs + ordered queue entries (fixed or random) |
+
+---
+
+## Multiplayer Status (Netcode for GameObjects)
+
+**Framework**: Unity Netcode for GameObjects (NGO) 2.9.2 + Unity Transport 2.6.0
+**Topology**: Host-authoritative. Host runs server + client. Clients send requests via ServerRpc; host validates and replicates via NetworkVariable / ClientRpc.
+**Full plan**: See `MULTIPLAYER_PLAN.md`
+
+### New Scripts (`Assets/Scripts/Networking/`)
+
+| Script | Purpose |
+|---|---|
+| `ClientNetworkTransform.cs` | Owner-authoritative NetworkTransform. Overrides `OnIsServerAuthoritative()→false`. Add to Player prefab root. |
+| `PlayerSetup.cs` | `NetworkBehaviour` on Player root. `OnNetworkSpawn()`: enables all input/camera components for the owner, disables them for non-owners. Sets `PlayerComponents.Local`. |
+| `QuickConnect.cs` | Temporary `OnGUI` buttons (Start Host / Start Client). Attach to any scene object. Remove when lobby is implemented. |
+
+### Player Prefab — Required Components (root)
+`CharacterController` · `PlayerComponents` · `PlayerMovement` · `FocusStateManager` · `NetworkObject` · `ClientNetworkTransform` · `PlayerSetup`
+
+**Camera child**: Camera component **disabled by default**. `AudioListener` **disabled by default**. `PlayerSetup.OnNetworkSpawn()` re-enables both for the owning client only.
+
+### Scripts Converted to NetworkBehaviour
+
+| Script | Change | Guard |
+|---|---|---|
+| `PlayerMovement.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+| `MouseLook.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+| `ObjectPickup.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+| `FocusStateManager.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+| `ItemPlacementManager.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+
+### Scripts Left Unchanged (already safe)
+
+| Script | Reason |
+|---|---|
+| `PillScraper.cs` | `Update()` already gates on `PlayerComponents.Local.FocusState.IsFocused` — only runs for the locally focused player |
+| `IDCardInteraction.cs` | `Update()` gates on `_isActive`, which is only set by `ObjectPickup` (already owner-guarded) |
+| `DialogueHistory.cs` | Local UI only; Enter key toggle has no network side effects |
+| `ComputerScreenController.cs` | Debug `Update()` wrapped in `#if UNITY_EDITOR`; no gameplay input |
+
+### PlayerComponents.Local — Ownership Rules
+- `Local` setter is now `public` (was `private`)
+- `Awake()` no longer sets `Local = this` (would be overwritten by each spawned player on the same machine)
+- `PlayerSetup.OnNetworkSpawn()` sets `Local` **only when `IsOwner` is true**
+- World scripts (NPCDialogueTrigger, PillScraper, etc.) access the local player via `PlayerComponents.Local`
+
+### Known Timing Issue: NPCDialogueTrigger Warning
+`NPCDialogueTrigger.Start()` reads `PlayerComponents.Local` before the player spawns (scene `Start()` runs before `NetworkManager.StartHost()` is called). The warning `"Could not find PlayerComponents/PlayerMovement in scene"` is harmless — `_playerTransform` stays null until a player is nearby. **Fix planned in Player Registry tier**: subscribe to a player-spawned event and assign `_playerTransform` lazily.
+
+### What Still Needs Networking (pending tiers)
+1. **Player Registry** — static `Dictionary<ulong, PlayerComponents>` so world scripts can find any/nearest player reliably. Fixes NPCDialogueTrigger timing issue.
+2. **Object Pickup** — pickup, throw, drop, bagging, delivery spawn all need ServerRpc/ClientRpc. Currently local-only.
+3. **Shelf & Inventory** — `ShelfSlot`, `ShelfSection`, `InventoryBox` need `NetworkObject` + `NetworkVariable` for synced state.
+4. **NPC System** — `NPCInteractionController`, `NPCSpawnManager`, `GameStarter` need host-only guards (`if (!IsServer) return`).
+5. **Counter & Checkout** — `CounterSlot`, `CashRegister` need ServerRpc flow.
+6. **Computer Screen / ID Card / Pill Counting** — exclusive-access locks via `NetworkVariable<ulong> CurrentUserId`.
+7. **Dialogue** — `DialogueManager` needs to move from scene singleton to per-player component on player prefab.

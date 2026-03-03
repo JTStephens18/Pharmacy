@@ -1,11 +1,17 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
 /// Interactable delivery station that spawns inventory boxes.
 /// The spawned box inherits its inventory from the prefab configuration.
 /// Place this on a GameObject in the scene where boxes should be delivered.
+///
+/// Networking: SpawnBox() sends a ServerRpc so the host instantiates and
+/// network-spawns the box, making it visible to all clients.
+/// Requires: InventoryBox prefab must have a NetworkObject component and be
+/// registered in NetworkManager → NetworkPrefabsList.
 /// </summary>
-public class DeliveryStation : MonoBehaviour
+public class DeliveryStation : NetworkBehaviour
 {
     [Header("Spawn Settings")]
     [Tooltip("The InventoryBox prefab to spawn. Inventory is inherited from prefab.")]
@@ -22,39 +28,43 @@ public class DeliveryStation : MonoBehaviour
     [SerializeField] private bool logOperations = false;
 
     /// <summary>
-    /// Spawns a new inventory box at the spawn point.
-    /// The box inherits its inventory from the prefab configuration.
+    /// Called by ObjectPickup when the player presses E on this station.
+    /// Routes to the server so the spawned box appears for all clients.
     /// </summary>
-    /// <returns>The spawned InventoryBox, or null if spawning failed.</returns>
-    public InventoryBox SpawnBox()
+    public void SpawnBox()
+    {
+        SpawnBoxServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SpawnBoxServerRpc()
     {
         if (inventoryBoxPrefab == null)
         {
             Debug.LogWarning("[DeliveryStation] No inventory box prefab assigned!");
-            return null;
+            return;
         }
 
-        // Determine spawn position and rotation
         Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : transform.position;
         Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-        // Instantiate the box - inventory is inherited from prefab
         GameObject boxObj = Instantiate(inventoryBoxPrefab, spawnPos, spawnRot);
-        InventoryBox box = boxObj.GetComponent<InventoryBox>();
 
-        if (box == null)
+        NetworkObject netObj = boxObj.GetComponent<NetworkObject>();
+        if (netObj != null)
         {
-            Debug.LogError("[DeliveryStation] Spawned prefab does not have an InventoryBox component!");
-            Destroy(boxObj);
-            return null;
+            netObj.Spawn();
+        }
+        else
+        {
+            Debug.LogWarning("[DeliveryStation] InventoryBox prefab has no NetworkObject — " +
+                             "box will only appear on the host. Add NetworkObject to the prefab " +
+                             "and register it in NetworkManager → NetworkPrefabsList.");
         }
 
         if (logOperations)
             Debug.Log($"[DeliveryStation] Spawned new inventory box at {spawnPos}");
-
-        return box;
     }
-
 
     /// <summary>
     /// Shows the highlight indicator when player is looking at the station.

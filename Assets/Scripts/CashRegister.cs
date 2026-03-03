@@ -1,10 +1,14 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
 /// Cash register that triggers NPC checkout when the player interacts with it.
 /// Detected by ObjectPickup via raycast, just like other interactables.
+///
+/// Networking: ProcessCheckout() sends a ServerRpc so NPC state changes
+/// happen on the host (server-authoritative NPC logic).
 /// </summary>
-public class CashRegister : MonoBehaviour
+public class CashRegister : NetworkBehaviour
 {
     [Header("NPC Detection")]
     [Tooltip("Radius to check for NPCs at the counter.")]
@@ -12,9 +16,15 @@ public class CashRegister : MonoBehaviour
 
     /// <summary>
     /// Called by ObjectPickup when the player interacts with this cash register.
-    /// Finds the nearest eligible NPC and triggers their checkout.
+    /// Routes to the server so NPC state changes are authoritative.
     /// </summary>
     public void ProcessCheckout()
+    {
+        ProcessCheckoutServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ProcessCheckoutServerRpc()
     {
         // Find all NPCs in the scene directly
         NPCInteractionController[] allNPCs = FindObjectsOfType<NPCInteractionController>();
