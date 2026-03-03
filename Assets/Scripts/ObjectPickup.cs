@@ -1,6 +1,7 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class ObjectPickup : MonoBehaviour
+public class ObjectPickup : NetworkBehaviour
 {
     [Header("Pickup Settings")]
     [SerializeField] private float pickupRange = 3f;
@@ -53,6 +54,7 @@ public class ObjectPickup : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
         // Always detect placeable targets for highlight (some slots show even without held item)
         DetectPlaceable();
         DetectDeliveryStation();

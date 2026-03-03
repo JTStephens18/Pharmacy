@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -8,7 +9,7 @@ using UnityEngine;
 /// When entering focus mode it disables FPS controls and smoothly moves the camera
 /// to a target transform. On exit it lerps back to the original position.
 /// </summary>
-public class FocusStateManager : MonoBehaviour
+public class FocusStateManager : NetworkBehaviour
 {
     /// <summary>
     /// Fired when focus state changes. True = entered focus, False = exited focus.
@@ -73,6 +74,7 @@ public class FocusStateManager : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
         if (_isFocused && !_isTransitioning && Input.GetKeyDown(exitKey))
         {
             ExitFocus();

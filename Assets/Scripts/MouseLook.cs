@@ -1,6 +1,7 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class MouseLook : MonoBehaviour
+public class MouseLook : NetworkBehaviour
 {
     [Header("Sensitivity")]
     [SerializeField] private float sensitivityX = 2.0f;
@@ -52,6 +53,7 @@ public class MouseLook : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
         HandleLook();
         HandleShake();
     }

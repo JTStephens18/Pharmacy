@@ -1,6 +1,7 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
     [Header("References")]
     [SerializeField] private CharacterController controller;
@@ -33,6 +34,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
         HandleGroundCheck();
         HandleMovement();
         HandleJumping();

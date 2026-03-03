@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -6,7 +7,7 @@ using UnityEngine;
 /// and a locked item queue for predictable restocking.
 /// Attach to the player or camera object alongside ObjectPickup.
 /// </summary>
-public class ItemPlacementManager : MonoBehaviour
+public class ItemPlacementManager : NetworkBehaviour
 {
     public enum PlacementState { Idle, Ready, Disabled }
 
@@ -95,6 +96,7 @@ public class ItemPlacementManager : MonoBehaviour
 
     private void Update()
     {
+        if (!IsOwner) return;
         // Toggle ghost preview
         if (Input.GetKeyDown(togglePreviewKey))
         {

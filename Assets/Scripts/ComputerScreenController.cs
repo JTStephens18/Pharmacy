@@ -75,7 +75,8 @@ public class ComputerScreenController : MonoBehaviour
         HideAll();
     }
 
-    // ── DEBUG: Click diagnostic (remove once tabs work) ─────────────
+    // ── DEBUG: Click diagnostic (editor only) ───────────────────────
+#if UNITY_EDITOR
     private bool _loggedCanvasInfo = false;
 
     void Update()
@@ -169,6 +170,7 @@ public class ComputerScreenController : MonoBehaviour
             }
         }
     }
+#endif
 
     // ── Public API (called by ComputerScreen.cs) ────────────────────
 

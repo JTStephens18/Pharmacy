@@ -23,7 +23,7 @@ public class PlayerComponents : MonoBehaviour
     /// The local player's components. In single-player this is the only player.
     /// In multiplayer this will be set by the owning client only.
     /// </summary>
-    public static PlayerComponents Local { get; private set; }
+    public static PlayerComponents Local { get; set; }
 
     // ── Cached References ────────────────────────────────────────────
     public PlayerMovement Movement { get; private set; }
@@ -35,8 +35,6 @@ public class PlayerComponents : MonoBehaviour
 
     void Awake()
     {
-        Local = this;
-
         // Auto-find components in the player hierarchy
         Movement = GetComponent<PlayerMovement>();
         Look = GetComponentInChildren<MouseLook>();
