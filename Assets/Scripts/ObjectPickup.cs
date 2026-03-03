@@ -43,6 +43,15 @@ public class ObjectPickup : NetworkBehaviour
     private CashRegister _currentCashRegister;
     private IDCardInteraction _currentIDCard;
 
+    // ── Networked hold state ────────────────────────────────────────
+    // When the held object is a NetworkObject we can't SetParent to the camera
+    // (camera is not a NetworkObject). Instead we store the hold offsets and
+    // manually update world-space position every frame; ClientNetworkTransform
+    // on the object then syncs that position to all other clients.
+    private NetworkObject _heldNetworkObject;
+    private Vector3 _networkHoldOffset;
+    private Vector3 _networkHoldRotation;
+
     void Start()
     {
         _playerComponents = GetComponentInParent<PlayerComponents>();
@@ -147,6 +156,15 @@ public class ObjectPickup : NetworkBehaviour
         {
             Debug.DrawRay(_playerCamera.transform.position, _playerCamera.transform.forward * pickupRange, Color.yellow);
         }
+
+        // Manually position networked held objects in world space each frame.
+        // ClientNetworkTransform on the object picks up these world-space changes
+        // and replicates them to all other clients automatically.
+        if (_heldNetworkObject != null && _playerCamera != null)
+        {
+            _heldObject.transform.position = _playerCamera.transform.TransformPoint(_networkHoldOffset);
+            _heldObject.transform.rotation = _playerCamera.transform.rotation * Quaternion.Euler(_networkHoldRotation);
+        }
     }
 
     private void TryPickup()
@@ -164,10 +182,131 @@ public class ObjectPickup : NetworkBehaviour
 
             if (rb != null && !rb.isKinematic)
             {
-                PickupObject(hit.collider.gameObject, rb, hit.collider);
+                // If the object is a NetworkObject, route through server so all clients agree
+                NetworkObject netObj = hit.collider.GetComponentInParent<NetworkObject>()
+                                   ?? hit.collider.GetComponent<NetworkObject>();
+                if (netObj != null)
+                    RequestPickupServerRpc(netObj.NetworkObjectId);
+                else
+                    PickupObject(hit.collider.gameObject, rb, hit.collider);
             }
         }
     }
+
+    // ── Networked pickup ────────────────────────────────────────────
+
+    /// <summary>
+    /// Client asks server to give them ownership of a NetworkObject so they can pick it up.
+    /// Server validates the object isn't already held (owned by another client), then
+    /// transfers ownership and notifies all clients.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestPickupServerRpc(ulong networkObjectId, ServerRpcParams serverRpcParams = default)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+        {
+            Debug.LogWarning($"[ObjectPickup] RequestPickupServerRpc: NetworkObject {networkObjectId} not found.");
+            return;
+        }
+
+        // Only allow pickup if the server still owns it (not already held by another client)
+        if (netObj.OwnerClientId != NetworkManager.ServerClientId)
+        {
+            Debug.Log($"[ObjectPickup] RequestPickupServerRpc: Object already held by client {netObj.OwnerClientId}.");
+            return;
+        }
+
+        ulong senderClientId = serverRpcParams.Receive.SenderClientId;
+        netObj.ChangeOwnership(senderClientId);
+        ConfirmPickupClientRpc(networkObjectId, senderClientId);
+    }
+
+    /// <summary>
+    /// Sent to all clients after server confirms pickup.
+    /// Only the picker sets up local hold state; all other clients receive
+    /// position updates automatically via ClientNetworkTransform.
+    /// </summary>
+    [ClientRpc]
+    private void ConfirmPickupClientRpc(ulong networkObjectId, ulong holderClientId)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj)) return;
+
+        // Only the picker does local hold setup
+        if (holderClientId != NetworkManager.Singleton.LocalClientId) return;
+
+        Rigidbody rb = netObj.GetComponent<Rigidbody>();
+        Collider col = netObj.GetComponentInChildren<Collider>();
+        if (rb == null) return;
+
+        _heldNetworkObject = netObj;
+        DoNetworkPickup(netObj.gameObject, rb, col);
+    }
+
+    /// <summary>
+    /// Sets up local hold state for a NetworkObject without parenting it to the camera.
+    /// Position is driven manually each frame in Update() instead.
+    /// </summary>
+    private void DoNetworkPickup(GameObject obj, Rigidbody rb, Collider col)
+    {
+        ShelfSlot slot = obj.GetComponentInParent<ShelfSlot>();
+        if (slot != null) slot.RemoveSpecificItem(obj);
+
+        _heldObject = obj;
+        _heldRigidbody = rb;
+        _heldCollider = col;
+        _heldObjectOriginalScale = obj.transform.lossyScale;
+        _isHoldingInventoryBox = obj.GetComponent<InventoryBox>() != null;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.useGravity = false;
+        rb.isKinematic = true;
+        if (col != null) col.enabled = false;
+
+        HoldableItem holdable = obj.GetComponent<HoldableItem>();
+        _networkHoldOffset   = (holdable != null && holdable.useCustomHoldSettings) ? holdable.holdOffset   : defaultHoldOffset;
+        _networkHoldRotation = (holdable != null && holdable.useCustomHoldSettings) ? holdable.holdRotation : defaultHoldRotation;
+    }
+
+    /// <summary>
+    /// Releases a held NetworkObject: re-enables physics locally, then tells the server
+    /// to take ownership back and apply the release velocity.
+    /// </summary>
+    private void ReleaseHeldNetworkObject(Vector3 velocity)
+    {
+        if (_heldCollider != null) _heldCollider.enabled = true;
+        _heldRigidbody.isKinematic = false;
+        _heldRigidbody.useGravity = true;
+        _heldRigidbody.freezeRotation = false;
+        _heldRigidbody.interpolation = RigidbodyInterpolation.None;
+
+        ReleaseNetworkObjectServerRpc(_heldNetworkObject.NetworkObjectId, velocity);
+
+        _heldNetworkObject = null;
+        _heldObject = null;
+        _heldRigidbody = null;
+        _heldCollider = null;
+        _isHoldingInventoryBox = false;
+    }
+
+    /// <summary>
+    /// Server takes ownership back from the client and applies the release velocity
+    /// so physics simulation is authoritative on the host.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void ReleaseNetworkObjectServerRpc(ulong networkObjectId, Vector3 velocity)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj)) return;
+        netObj.ChangeOwnership(NetworkManager.ServerClientId);
+        if (netObj.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.linearVelocity = velocity;
+        }
+    }
+
+    // ── Local pickup (non-NetworkObject) ────────────────────────────
 
     private void PickupObject(GameObject obj, Rigidbody rb, Collider col)
     {
@@ -240,6 +379,8 @@ public class ObjectPickup : NetworkBehaviour
 
     private void DropObject()
     {
+        if (_heldNetworkObject != null) { ReleaseHeldNetworkObject(_playerCamera.transform.forward * 2f); return; }
+
         if (_heldRigidbody != null)
         {
             ReleaseHeldObject();
@@ -256,6 +397,8 @@ public class ObjectPickup : NetworkBehaviour
 
     private void ThrowObject()
     {
+        if (_heldNetworkObject != null) { ReleaseHeldNetworkObject(_playerCamera.transform.forward * throwForce); return; }
+
         if (_heldRigidbody != null)
         {
             ReleaseHeldObject();
@@ -272,6 +415,8 @@ public class ObjectPickup : NetworkBehaviour
 
     private void PlaceObject()
     {
+        if (_heldNetworkObject != null) { ReleaseHeldNetworkObject(Vector3.zero); return; }
+
         if (_heldRigidbody != null)
         {
             ReleaseHeldObject();
@@ -550,13 +695,11 @@ public class ObjectPickup : NetworkBehaviour
         return _heldObject;
     }
 
-    // Force drop (can be called externally if needed)
+    // Force drop (can be called externally if needed, e.g. by InventoryBox.ShrinkAndDestroy)
     public void ForceDropObject()
     {
-        if (_heldObject != null)
-        {
-            DropObject();
-        }
+        if (_heldNetworkObject != null) { ReleaseHeldNetworkObject(Vector3.zero); return; }
+        if (_heldObject != null) DropObject();
     }
 
     // Check if currently holding an InventoryBox
