@@ -217,6 +217,14 @@ public class ObjectPickup : NetworkBehaviour
         }
 
         ulong senderClientId = serverRpcParams.Receive.SenderClientId;
+
+        // If the item was sitting in a shelf slot, remove it and sync the count to all clients
+        if (ShelfSlotNetwork.TryFindSlotContaining(netObj.gameObject, out ShelfSlotNetwork sectionNet, out int slotIdx))
+        {
+            sectionNet.GetSlotAt(slotIdx).RemoveSpecificItem(netObj.gameObject);
+            sectionNet.RecordPickup(slotIdx, sectionNet.GetSlotAt(slotIdx).CurrentItemCount);
+        }
+
         netObj.ChangeOwnership(senderClientId);
         ConfirmPickupClientRpc(networkObjectId, senderClientId);
     }
@@ -248,9 +256,6 @@ public class ObjectPickup : NetworkBehaviour
     /// </summary>
     private void DoNetworkPickup(GameObject obj, Rigidbody rb, Collider col)
     {
-        ShelfSlot slot = obj.GetComponentInParent<ShelfSlot>();
-        if (slot != null) slot.RemoveSpecificItem(obj);
-
         _heldObject = obj;
         _heldRigidbody = rb;
         _heldCollider = col;

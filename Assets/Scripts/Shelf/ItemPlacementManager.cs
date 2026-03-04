@@ -343,6 +343,9 @@ public class ItemPlacementManager : NetworkBehaviour
     /// <summary>
     /// Attempts to place an item from the box onto the targeted shelf slot.
     /// Called by ObjectPickup when interact key is pressed.
+    /// If the shelf section and box both have NetworkObjects, routes through a
+    /// ServerRpc so the item spawns for all clients. Falls back to local
+    /// Instantiate for non-networked (editor/pre-networking) setups.
     /// </summary>
     public bool TryPlaceFromBox()
     {
@@ -356,7 +359,42 @@ public class ItemPlacementManager : NetworkBehaviour
             return false;
         }
 
-        // Get prefab from the category itself
+        // ── Networked path ────────────────────────────────────────────
+        ShelfSlotNetwork slotNetwork = _targetSlot.GetComponentInParent<ShelfSlotNetwork>();
+        NetworkObject boxNetObj = _activeBox.GetComponent<NetworkObject>();
+
+        if (slotNetwork != null && boxNetObj != null)
+        {
+            NetworkObject sectionNetObj = slotNetwork.GetComponent<NetworkObject>();
+            if (sectionNetObj != null)
+            {
+                // Find this slot's index within the section
+                int slotIdx = -1;
+                for (int i = 0; i < slotNetwork.SlotCount; i++)
+                {
+                    if (slotNetwork.GetSlotAt(i) == _targetSlot) { slotIdx = i; break; }
+                }
+
+                if (slotIdx >= 0)
+                {
+                    // Advance queue locally so ghost previews update immediately
+                    if (_itemQueue.Count > 0)
+                        _itemQueue.RemoveAt(0);
+
+                    if (_boxPreview != null)
+                        _boxPreview.AnimateSlotSwap();
+
+                    ClearAllGhostPreviews();
+                    RebuildItemQueue();
+
+                    // Server handles Instantiate + Spawn + RecordPlacement + box.Decrement
+                    PlaceItemOnShelfServerRpc(sectionNetObj.NetworkObjectId, slotIdx, boxNetObj.NetworkObjectId);
+                    return true;
+                }
+            }
+        }
+
+        // ── Fallback: local placement (item prefab lacks NetworkObject) ──
         GameObject prefab = category.prefab;
         if (prefab == null)
         {
@@ -364,45 +402,85 @@ public class ItemPlacementManager : NetworkBehaviour
             return false;
         }
 
-        // Spawn the item
         GameObject itemInstance = Instantiate(prefab);
 
-        // Try to place on shelf
         if (_targetSlot.TryPlaceItem(itemInstance))
         {
-            // Decrement box inventory
             _activeBox.Decrement();
 
-            // Trigger swap animation in box preview before rebuilding queue
             if (_boxPreview != null)
                 _boxPreview.AnimateSlotSwap();
 
-            // Refresh ghost previews after placement
             ClearAllGhostPreviews();
 
             if (logStateChanges)
                 Debug.Log($"[ItemPlacementManager] Placed {category.name} on {_targetSlot.gameObject.name}. Box remaining: {_activeBox.GetRemainingCount()}");
 
-            // Dequeue the placed item and rebuild queue
             if (_itemQueue.Count > 0)
                 _itemQueue.RemoveAt(0);
 
             RebuildItemQueue();
-
             return true;
         }
         else
         {
-            // Placement failed - destroy spawned item
             Destroy(itemInstance);
 
-            // Trigger screen shake
             PlayerComponents pc = GetComponentInParent<PlayerComponents>();
             if (pc != null && pc.Look != null)
                 pc.Look.Shake();
 
             return false;
         }
+    }
+
+    /// <summary>
+    /// Server-authoritative item spawn. Instantiates the item prefab, positions it
+    /// in world space (no parenting — NGO forbids parenting NetworkObjects to
+    /// non-NetworkObjects), network-spawns it, then syncs the slot count and
+    /// decrements the box.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void PlaceItemOnShelfServerRpc(
+        ulong sectionNetworkObjectId,
+        int slotIndex,
+        ulong boxNetworkObjectId)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(sectionNetworkObjectId, out NetworkObject sectionNetObj)) return;
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(boxNetworkObjectId, out NetworkObject boxNetObj)) return;
+
+        ShelfSlotNetwork slotNetwork = sectionNetObj.GetComponent<ShelfSlotNetwork>();
+        InventoryBox box = boxNetObj.GetComponent<InventoryBox>();
+        if (slotNetwork == null || box == null || !box.HasAnyStock()) return;
+
+        ShelfSlot slot = slotNetwork.GetSlotAt(slotIndex);
+        if (slot == null || slot.IsOccupied) return;
+
+        ItemCategory category = slot.AcceptedCategory;
+        if (category == null || category.prefab == null) return;
+
+        GameObject itemObj = Instantiate(category.prefab);
+        NetworkObject itemNetObj = itemObj.GetComponent<NetworkObject>();
+        if (itemNetObj == null)
+        {
+            Debug.LogWarning($"[ItemPlacementManager] Prefab '{category.prefab.name}' has no NetworkObject. " +
+                             "Add NetworkObject + ClientNetworkTransform and register in NetworkPrefabsList.");
+            Destroy(itemObj);
+            return;
+        }
+
+        // Position in world space BEFORE Spawn() — SetParent is forbidden for NetworkObjects
+        slot.PlaceItem(itemObj, setParent: false);
+        itemNetObj.Spawn();
+
+        // Sync slot count to all clients via NetworkList
+        slotNetwork.RecordPlacement(slotIndex, slot.CurrentItemCount);
+
+        // Decrement box server-side (InventoryBox is a NetworkObject so this is safe)
+        box.Decrement();
+
+        if (logStateChanges)
+            Debug.Log($"[ItemPlacementManager] Server placed '{category.name}' on slot {slotIndex}.");
     }
 
     #endregion

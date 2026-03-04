@@ -277,7 +277,7 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
     /// <summary>
     /// Places an item in the next available position in this slot.
     /// </summary>
-    public void PlaceItem(GameObject item)
+    public void PlaceItem(GameObject item, bool setParent = true)
     {
         if (currentItemCount >= itemPlacements.Count)
         {
@@ -293,10 +293,6 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
 
         Debug.Log($"[ShelfSlot] PlaceItem: Slot '{gameObject.name}' now has {currentItemCount} items. placedItem at [{currentItemCount - 1}] = {placement.placedItem?.name ?? "null"}");
 
-        // Parent first, then set local transforms for precise control
-        item.transform.SetParent(transform);
-        item.transform.localPosition = placement.positionOffset;
-
         // Calculate total rotation: slot offset * category offset
         Quaternion placementRot = Quaternion.Euler(placement.rotationOffset);
         Quaternion categoryRot = Quaternion.identity;
@@ -307,7 +303,19 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
             categoryRot = Quaternion.Euler(interactable.ItemCategory.shelfRotationOffset);
         }
 
-        item.transform.localRotation = placementRot * categoryRot;
+        if (setParent)
+        {
+            // Parent first, then set local transforms for precise control
+            item.transform.SetParent(transform);
+            item.transform.localPosition = placement.positionOffset;
+            item.transform.localRotation = placementRot * categoryRot;
+        }
+        else
+        {
+            // World-space path for NetworkObjects (NGO forbids parenting to non-NetworkObjects)
+            item.transform.position = transform.TransformPoint(placement.positionOffset);
+            item.transform.rotation = transform.rotation * placementRot * categoryRot;
+        }
 
         // Configure physics for completely static placement
         Rigidbody rb = item.GetComponent<Rigidbody>();
@@ -420,7 +428,6 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
             {
                 // Update transform to new position
                 ItemPlacement placement = itemPlacements[i];
-                nextItem.transform.localPosition = placement.positionOffset;
 
                 // Recalculate rotation for new position
                 Quaternion placementRot = Quaternion.Euler(placement.rotationOffset);
@@ -432,7 +439,17 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
                     categoryRot = Quaternion.Euler(interactable.ItemCategory.shelfRotationOffset);
                 }
 
-                nextItem.transform.localRotation = placementRot * categoryRot;
+                if (nextItem.transform.parent != null)
+                {
+                    nextItem.transform.localPosition = placement.positionOffset;
+                    nextItem.transform.localRotation = placementRot * categoryRot;
+                }
+                else
+                {
+                    // World-space path for unparented NetworkObjects
+                    nextItem.transform.position = transform.TransformPoint(placement.positionOffset);
+                    nextItem.transform.rotation = transform.rotation * placementRot * categoryRot;
+                }
             }
         }
 
@@ -456,6 +473,28 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
             itemPlacements[i].placedItem = null;
         }
         currentItemCount = 0;
+    }
+
+    /// <summary>
+    /// Sets the item count from a network sync. Clears placedItem refs for slots beyond
+    /// the new count. Called by ShelfSlotNetwork on non-host clients.
+    /// </summary>
+    public void SetNetworkedItemCount(int count)
+    {
+        currentItemCount = count;
+        for (int i = count; i < itemPlacements.Count; i++)
+            itemPlacements[i].placedItem = null;
+    }
+
+    /// <summary>
+    /// Returns true if the given GameObject is currently registered in this slot.
+    /// Used server-side by ShelfSlotNetwork.TryFindSlotContaining().
+    /// </summary>
+    public bool ContainsItem(GameObject item)
+    {
+        for (int i = 0; i < currentItemCount; i++)
+            if (itemPlacements[i].placedItem == item) return true;
+        return false;
     }
 
 #if UNITY_EDITOR

@@ -4344,8 +4344,19 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7157679179208365246, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1552677474}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7502715395881356804, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1496875623}
+    - targetCorrespondingSourceObject: {fileID: 7502715395881356804, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1496875624}
   m_SourcePrefab: {fileID: 100100000, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
+--- !u!1 &1394733251 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7502715395881356804, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
+  m_PrefabInstance: {fileID: 1394733250}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1412649638
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4393,6 +4404,18 @@ PrefabInstance:
     - target: {fileID: 7139779233072005102, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 759407083
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 344835274
       objectReference: {fileID: 0}
     - target: {fileID: 7520527382059935060, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_Name
@@ -4467,6 +4490,44 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7157679179208365246, guid: 3b4d4892d6307d44fbaeec67c5cfb18a, type: 3}
   m_PrefabInstance: {fileID: 1394733250}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1496875623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1394733251}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 268482357
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &1496875624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1394733251}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14de9b8125b251342bb6d7a4344dc779, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &1497754070
 GameObject:
   m_ObjectHideFlags: 0
@@ -7045,6 +7106,18 @@ PrefabInstance:
     - target: {fileID: 7139779233072005102, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 1008388361
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512206193248189852, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 344835274
       objectReference: {fileID: 0}
     - target: {fileID: 7520527382059935060, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_Name
