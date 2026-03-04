@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -459,6 +460,13 @@ public class NPCInteractionController : MonoBehaviour
                         // Place in slot (handles positioning and physics)
                         slot.PlaceItem(item.gameObject);
                         placedItems.Add(item);
+
+                        // Broadcast to all clients that this NetworkObject is now a counter item,
+                        // so non-host clients can detect it during player interaction
+                        NetworkObject itemNetObj = item.GetComponent<NetworkObject>();
+                        CounterSlotNetwork counterSlotNetwork = slot.GetComponent<CounterSlotNetwork>();
+                        if (itemNetObj != null && counterSlotNetwork != null)
+                            counterSlotNetwork.RecordPlacement(itemNetObj.NetworkObjectId);
                     }
                     else
                     {
@@ -699,8 +707,22 @@ public class NPCInteractionController : MonoBehaviour
 
         if (nearestSlot != null && nearestItem != null)
         {
-            // Remove item from shelf slot first
+            // Find ShelfSlotNetwork BEFORE removing so we still have the slot index
+            ShelfSlotNetwork shelfSlotNet = nearestSlot.GetComponentInParent<ShelfSlotNetwork>();
+            int shelfSlotIndex = -1;
+            if (shelfSlotNet != null)
+            {
+                for (int i = 0; i < shelfSlotNet.SlotCount; i++)
+                    if (shelfSlotNet.GetSlotAt(i) == nearestSlot) { shelfSlotIndex = i; break; }
+            }
+
+            // Remove item from shelf slot (NetworkObjects stay kinematic — no physics re-enable)
             GameObject removedItem = nearestSlot.RemoveItem();
+
+            // Sync slot count to all clients via NetworkList
+            if (shelfSlotNet != null && shelfSlotIndex >= 0 && removedItem != null)
+                shelfSlotNet.RecordPickup(shelfSlotIndex, nearestSlot.CurrentItemCount);
+
             if (removedItem != null)
             {
                 IInteractable interactable = removedItem.GetComponent<IInteractable>();

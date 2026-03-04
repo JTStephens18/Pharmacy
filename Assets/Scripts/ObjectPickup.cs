@@ -93,7 +93,8 @@ public class ObjectPickup : NetworkBehaviour
                     _currentIDCard.Activate();
                 }
                 // Check for counter item (delete on E press)
-                else if (_currentCounterItem != null && _currentCounterItemSlot != null)
+                // Slot may be null for networked items (found server-side during deletion)
+                else if (_currentCounterItem != null)
                 {
                     DeleteCounterItem();
                 }
@@ -528,12 +529,28 @@ public class ObjectPickup : NetworkBehaviour
 
             if (item != null)
             {
-                // Check if this item is parented to a counter slot
+                // Legacy path: item is parented to a CounterSlot (non-networked)
                 CounterSlot parentSlot = item.transform.parent?.GetComponent<CounterSlot>();
                 if (parentSlot != null)
                 {
                     newItem = item;
                     newSlot = parentSlot;
+                }
+                else
+                {
+                    // Networked path: item is world-space; use spatial detection via BoxCollider bounds.
+                    // Works without any editor registry setup — ClosestPoint returns the input point
+                    // unchanged when the point is already inside the collider.
+                    NetworkObject netObj = item.GetComponent<NetworkObject>();
+                    if (netObj != null)
+                    {
+                        CounterSlot spatialSlot = CounterSlot.FindContainingSlot(item.transform.position);
+                        if (spatialSlot != null)
+                        {
+                            newItem = item;
+                            newSlot = spatialSlot;
+                        }
+                    }
                 }
             }
         }
@@ -557,20 +574,54 @@ public class ObjectPickup : NetworkBehaviour
 
     private void DeleteCounterItem()
     {
-        if (_currentCounterItem == null || _currentCounterItemSlot == null) return;
+        if (_currentCounterItem == null) return;
 
-        Debug.Log($"[ObjectPickup] Deleting counter item: {_currentCounterItem.gameObject.name}");
+        NetworkObject netObj = _currentCounterItem.GetComponent<NetworkObject>();
+        if (netObj != null)
+        {
+            // Networked path: server finds the slot, notifies clients, and despawns the item
+            DeleteCounterItemServerRpc(netObj.NetworkObjectId);
+        }
+        else if (_currentCounterItemSlot != null)
+        {
+            // Local fallback (non-networked items)
+            Debug.Log($"[ObjectPickup] Deleting counter item: {_currentCounterItem.gameObject.name}");
+            GameObject itemObj = _currentCounterItem.gameObject;
+            _currentCounterItemSlot.RemoveItem(itemObj);
+            Destroy(itemObj);
+        }
 
-        // Remove from slot
-        GameObject itemObj = _currentCounterItem.gameObject;
-        _currentCounterItemSlot.RemoveItem(itemObj);
-
-        // Destroy the item
-        Destroy(itemObj);
-
-        // Clear references
         _currentCounterItem = null;
         _currentCounterItemSlot = null;
+    }
+
+    /// <summary>
+    /// Server finds the counter slot that holds the item, broadcasts removal to clients,
+    /// then despawns (destroys) the NetworkObject on all clients.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void DeleteCounterItemServerRpc(ulong itemNetworkObjectId)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(itemNetworkObjectId, out NetworkObject netObj))
+            return;
+
+        // Clear the slot reference on the server
+        CounterSlot slot = CounterSlot.GetSlotContaining(netObj.gameObject);
+        if (slot == null)
+        {
+            Debug.LogWarning($"[ObjectPickup] DeleteCounterItemServerRpc: item {itemNetworkObjectId} not found in any CounterSlot — skipping despawn.");
+            return;
+        }
+        slot.RemoveItem(netObj.gameObject);
+
+        // Tell all clients to unregister this item from the counter registry
+        CounterSlotNetwork slotNetwork = slot.GetComponent<CounterSlotNetwork>();
+        if (slotNetwork != null)
+            slotNetwork.RecordRemoval(itemNetworkObjectId);
+
+        // Despawn and destroy on all clients
+        Debug.Log($"[ObjectPickup] Server despawning counter item {itemNetworkObjectId}.");
+        netObj.Despawn(true);
     }
 
 

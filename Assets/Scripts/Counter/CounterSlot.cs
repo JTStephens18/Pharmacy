@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -40,6 +41,13 @@ public class CounterSlot : MonoBehaviour, IPlaceable
     [Tooltip("Define positions for each item that can be placed in this slot. Array size = max items.")]
     [SerializeField] private List<CounterItemPlacement> itemPlacements = new List<CounterItemPlacement>() { new CounterItemPlacement() };
 
+    // All live instances — used for fast server-side scan (replaces FindObjectsByType)
+    private static readonly HashSet<CounterSlot> _all = new();
+
+    // NetworkObjectIds of items currently on any counter, broadcast to all clients by
+    // CounterSlotNetwork so non-host clients can detect counter items without a parent check.
+    private static readonly HashSet<ulong> _networkedCounterItems = new();
+
     private BoxCollider _collider;
     private LineRenderer _highlightRenderer;
     private bool _isHighlighted = false;
@@ -70,6 +78,8 @@ public class CounterSlot : MonoBehaviour, IPlaceable
 
     private void Awake()
     {
+        _all.Add(this);
+
         // Setup collider to match slot size
         _collider = GetComponent<BoxCollider>();
         if (_collider != null)
@@ -80,6 +90,11 @@ public class CounterSlot : MonoBehaviour, IPlaceable
 
         // Create highlight outline renderer
         CreateHighlightRenderer();
+    }
+
+    private void OnDestroy()
+    {
+        _all.Remove(this);
     }
 
     private void CreateHighlightRenderer()
@@ -150,10 +165,6 @@ public class CounterSlot : MonoBehaviour, IPlaceable
         CounterItemPlacement placement = itemPlacements[emptyIndex];
         placement.placedItem = item;
 
-        // Parent and position
-        item.transform.SetParent(transform);
-        item.transform.localPosition = placement.positionOffset;
-
         // Calculate rotation including category offset
         Quaternion placementRot = Quaternion.Euler(placement.rotationOffset);
         Quaternion categoryRot = Quaternion.identity;
@@ -164,7 +175,19 @@ public class CounterSlot : MonoBehaviour, IPlaceable
             categoryRot = Quaternion.Euler(interactable.ItemCategory.shelfRotationOffset);
         }
 
-        item.transform.localRotation = placementRot * categoryRot;
+        if (item.GetComponent<NetworkObject>() != null)
+        {
+            // World-space path for NetworkObjects (NGO forbids parenting to non-NetworkObjects)
+            item.transform.position = transform.TransformPoint(placement.positionOffset);
+            item.transform.rotation = transform.rotation * placementRot * categoryRot;
+        }
+        else
+        {
+            // Parent and position (legacy / non-networked path)
+            item.transform.SetParent(transform);
+            item.transform.localPosition = placement.positionOffset;
+            item.transform.localRotation = placementRot * categoryRot;
+        }
 
         // Make item static (kinematic)
         Rigidbody rb = item.GetComponent<Rigidbody>();
@@ -218,14 +241,45 @@ public class CounterSlot : MonoBehaviour, IPlaceable
 
     /// <summary>
     /// Gets the CounterSlot that contains a specific item.
-    /// Static helper for ObjectPickup to find the slot.
+    /// Uses the static registry instead of FindObjectsByType for performance.
+    /// Valid on the server where itemPlacements[].placedItem refs are set.
     /// </summary>
     public static CounterSlot GetSlotContaining(GameObject item)
     {
-        CounterSlot[] allSlots = FindObjectsByType<CounterSlot>(FindObjectsSortMode.None);
-        foreach (var slot in allSlots)
+        foreach (CounterSlot slot in _all)
         {
             if (slot.ContainsItem(item))
+                return slot;
+        }
+        return null;
+    }
+
+    // ── Networked counter item registry (populated via ClientRpc from CounterSlotNetwork) ──
+
+    /// <summary>Registers a NetworkObject ID as being on a counter. Called on all clients.</summary>
+    public static void RegisterNetworkedCounterItem(ulong networkObjectId)
+        => _networkedCounterItems.Add(networkObjectId);
+
+    /// <summary>Removes a NetworkObject ID from the counter registry. Called on all clients.</summary>
+    public static void UnregisterNetworkedCounterItem(ulong networkObjectId)
+        => _networkedCounterItems.Remove(networkObjectId);
+
+    /// <summary>Returns true if the given NetworkObject ID is currently on a counter.</summary>
+    public static bool IsNetworkedCounterItem(ulong networkObjectId)
+        => _networkedCounterItems.Contains(networkObjectId);
+
+    /// <summary>
+    /// Returns the first CounterSlot whose trigger volume contains the given world position.
+    /// Used for client-side detection of world-space NetworkObject counter items without
+    /// requiring a populated network registry (works even before CounterSlotNetwork is set up).
+    /// BoxCollider.ClosestPoint returns the input point itself when it is already inside.
+    /// </summary>
+    public static CounterSlot FindContainingSlot(Vector3 worldPosition)
+    {
+        foreach (CounterSlot slot in _all)
+        {
+            if (slot._collider == null) continue;
+            if (slot._collider.ClosestPoint(worldPosition) == worldPosition)
                 return slot;
         }
         return null;

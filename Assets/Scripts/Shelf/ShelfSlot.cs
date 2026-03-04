@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -361,12 +362,13 @@ public class ShelfSlot : MonoBehaviour, IPlaceable
             return null;
         }
 
-        // Unparent the item
+        // Unparent the item (no-op if already null — NetworkObjects are unparented)
         item.transform.SetParent(null);
 
-        // Re-enable physics
+        // Re-enable physics only for non-networked items.
+        // NetworkObject items stay kinematic so the server (NPC AI) can reposition them.
         Rigidbody rb = item.GetComponent<Rigidbody>();
-        if (rb != null)
+        if (rb != null && item.GetComponent<NetworkObject>() == null)
         {
             rb.constraints = RigidbodyConstraints.None;
             rb.isKinematic = false;

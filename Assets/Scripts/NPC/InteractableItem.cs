@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -83,6 +84,15 @@ public class InteractableItem : MonoBehaviour, IInteractable
         if (_collider != null)
         {
             _collider.enabled = false;
+        }
+
+        // For NetworkObjects: skip SetParent (NGO forbids parenting to non-NetworkObjects
+        // like the NPC hand bone). SetActive(false) is replicated by NGO so all clients
+        // see the item disappear.
+        if (GetComponent<NetworkObject>() != null)
+        {
+            gameObject.SetActive(false);
+            return;
         }
 
         // Parent to hand and snap to position (do this before hiding)
