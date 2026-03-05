@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class NPCSpawnManager : MonoBehaviour
@@ -40,6 +41,15 @@ public class NPCSpawnManager : MonoBehaviour
 
     public void StartNPCSpawning(RoundConfig config)
     {
+        // In a multiplayer session only the server spawns and controls NPCs.
+        // Clients receive NPC state via NetworkTransform + NetworkVariable syncing.
+        if (NetworkManager.Singleton != null &&
+            NetworkManager.Singleton.IsListening &&
+            !NetworkManager.Singleton.IsServer)
+        {
+            return;
+        }
+
         if (config == null)
         {
             Debug.LogError("[NPCSpawnManager] RoundConfig is null.");
@@ -138,6 +148,13 @@ public class NPCSpawnManager : MonoBehaviour
     {
         GameObject prefab = _spawnQueue.Dequeue();
         GameObject npcObject = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
+
+        // If the NPC prefab has a NetworkObject, register it with NGO so it replicates
+        // to all clients. The prefab must be in NetworkManager → NetworkPrefabsList.
+        NetworkObject netObj = npcObject.GetComponent<NetworkObject>();
+        if (netObj != null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            netObj.Spawn();
+
         _activeNPC = npcObject.GetComponent<NPCInteractionController>();
 
         if (_activeNPC == null)
@@ -146,6 +163,8 @@ public class NPCSpawnManager : MonoBehaviour
             return;
         }
 
+        // AssignSceneReferences only runs on the server — scene objects (counter slots,
+        // exit point, etc.) are server-side refs used by the AI state machine.
         _activeNPC.AssignSceneReferences(counterSlots, exitPoint, idCardSlot, allowedShelfSlots);
         OnNPCSpawned?.Invoke(_activeNPC);
     }

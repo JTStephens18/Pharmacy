@@ -33,6 +33,9 @@ public class NPCAnimationController : MonoBehaviour
     private NavMeshAgent _agent;
     private NPCInteractionController _npcController;
     private bool _wasWalking;
+    // Used on non-server clients to derive NPC velocity from transform position delta,
+    // because the NavMeshAgent is disabled on clients (server-authoritative NPC movement).
+    private Vector3 _lastPosition;
 
     private void Awake()
     {
@@ -59,11 +62,15 @@ public class NPCAnimationController : MonoBehaviour
             return;
         }
 
-        // Subscribe to NPC events if available
+        _lastPosition = transform.position;
+
+        // Subscribe to C# events for non-networked (solo / editor) usage.
+        // In networked play, NPCInteractionController fires ClientRpcs that call
+        // TriggerPickup / TriggerPlace directly, so these events are only a fallback.
         if (_npcController != null)
         {
-            _npcController.OnPickupStart += HandlePickupAnimation;
-            _npcController.OnPlaceStart += HandlePlaceAnimation;
+            _npcController.OnPickupStart += TriggerPickup;
+            _npcController.OnPlaceStart += TriggerPlace;
         }
     }
 
@@ -72,8 +79,8 @@ public class NPCAnimationController : MonoBehaviour
         // Unsubscribe from events
         if (_npcController != null)
         {
-            _npcController.OnPickupStart -= HandlePickupAnimation;
-            _npcController.OnPlaceStart -= HandlePlaceAnimation;
+            _npcController.OnPickupStart -= TriggerPickup;
+            _npcController.OnPlaceStart -= TriggerPlace;
         }
     }
 
@@ -83,20 +90,33 @@ public class NPCAnimationController : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates walk/idle animation based on NavMeshAgent state.
+    /// Updates walk/idle animation based on NavMeshAgent state (server) or position delta (clients).
     /// </summary>
     private void UpdateLocomotionAnimation()
     {
         if (animator == null || _agent == null) return;
 
-        // Get the horizontal speed (ignoring vertical movement)
-        float speed = new Vector3(_agent.velocity.x, 0, _agent.velocity.z).magnitude;
+        float speed;
+        bool hasActiveDestination;
 
-        // Determine if NPC should be walking based on having an active path
-        // This is more reliable than velocity because it doesn't depend on acceleration
-        bool hasActiveDestination = _agent.hasPath &&
-                                    !_agent.pathPending &&
-                                    _agent.remainingDistance > _agent.stoppingDistance;
+        if (_agent.enabled)
+        {
+            // Server (or non-networked): derive speed directly from the NavMeshAgent velocity.
+            speed = new Vector3(_agent.velocity.x, 0, _agent.velocity.z).magnitude;
+            hasActiveDestination = _agent.hasPath &&
+                                   !_agent.pathPending &&
+                                   _agent.remainingDistance > _agent.stoppingDistance;
+        }
+        else
+        {
+            // Non-server clients: the NavMeshAgent is disabled; derive speed from
+            // how far the NPC moved this frame (NetworkTransform keeps position in sync).
+            Vector3 delta = transform.position - _lastPosition;
+            speed = new Vector3(delta.x, 0, delta.z).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
+            hasActiveDestination = speed > walkThreshold;
+        }
+
+        _lastPosition = transform.position;
 
         // Use destination-based walking detection OR velocity for edge cases
         bool isWalking = hasActiveDestination || speed > walkThreshold;
@@ -133,40 +153,24 @@ public class NPCAnimationController : MonoBehaviour
     }
 
     /// <summary>
-    /// Triggers the pickup animation.
+    /// Triggers the pickup animation. Called by NPCInteractionController ClientRpc (networked)
+    /// or via the OnPickupStart C# event (non-networked / solo testing).
     /// </summary>
-    private void HandlePickupAnimation()
+    public void TriggerPickup()
     {
         if (animator == null) return;
-
         if (showDebugLogs) Debug.Log("[NPC Animation] Triggering PickUp animation");
         animator.SetTrigger(PickUpTrigger);
     }
 
     /// <summary>
-    /// Triggers the place animation.
-    /// </summary>
-    private void HandlePlaceAnimation()
-    {
-        if (animator == null) return;
-
-        if (showDebugLogs) Debug.Log("[NPC Animation] Triggering Place animation");
-        animator.SetTrigger(PlaceTrigger);
-    }
-
-    /// <summary>
-    /// Manually trigger pickup animation (for testing or external calls).
-    /// </summary>
-    public void TriggerPickup()
-    {
-        HandlePickupAnimation();
-    }
-
-    /// <summary>
-    /// Manually trigger place animation (for testing or external calls).
+    /// Triggers the place animation. Called by NPCInteractionController ClientRpc (networked)
+    /// or via the OnPlaceStart C# event (non-networked / solo testing).
     /// </summary>
     public void TriggerPlace()
     {
-        HandlePlaceAnimation();
+        if (animator == null) return;
+        if (showDebugLogs) Debug.Log("[NPC Animation] Triggering Place animation");
+        animator.SetTrigger(PlaceTrigger);
     }
 }

@@ -9,7 +9,7 @@ using UnityEngine.AI;
 /// Requires a NavMeshAgent component on the same GameObject.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
-public class NPCInteractionController : MonoBehaviour
+public class NPCInteractionController : NetworkBehaviour
 {
     /// <summary>
     /// Fired just before an NPC is destroyed after reaching the exit (or despawning immediately).
@@ -101,7 +101,31 @@ public class NPCInteractionController : MonoBehaviour
 
     // States for the interaction flow
     public enum NPCState { Idle, MovingToItem, WaitingAtItem, PickingUp, MovingToCounter, PlacingItem, WaitingForCheckout, MovingToExit }
-    private NPCState _currentState = NPCState.Idle;
+
+    // Networked state — synced to all clients so NPCAnimationController can read it.
+    // Write-permission is Server so only the server's state machine updates it.
+    private NetworkVariable<int> _networkState = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    /// <summary>Networked NPC state integer (cast to NPCState). Readable on all clients.</summary>
+    public NetworkVariable<int> NetworkNPCState => _networkState;
+
+    // Private backing field. All assignments go through the property so _networkState stays in sync.
+    private NPCState _currentStateInternal = NPCState.Idle;
+    private NPCState _currentState
+    {
+        get => _currentStateInternal;
+        set
+        {
+            _currentStateInternal = value;
+            // Only the server writes to the NetworkVariable (guards against client-side reads).
+            if (_networkState != null &&
+                (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || IsServer))
+            {
+                _networkState.Value = (int)value;
+            }
+        }
+    }
 
     /// <summary>The NPC's current state (read-only).</summary>
     public NPCState CurrentNPCState => _currentState;
@@ -120,8 +144,23 @@ public class NPCInteractionController : MonoBehaviour
         _agent.stoppingDistance = reachDistance;
     }
 
+    public override void OnNetworkSpawn()
+    {
+        // Clients don't run the NPC AI — disable their NavMeshAgent so it doesn't
+        // fight with the NetworkTransform that syncs position from the server.
+        if (!IsServer)
+        {
+            _agent.enabled = false;
+        }
+    }
+
     private void Update()
     {
+        // NPC AI runs on the server only. Clients receive position/state via NetworkTransform
+        // and the _networkState NetworkVariable.
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
+            return;
+
         switch (_currentState)
         {
             case NPCState.Idle:
@@ -178,8 +217,7 @@ public class NPCInteractionController : MonoBehaviour
             else
             {
                 Debug.LogWarning("[NPC] Checkout triggered but no exit point assigned! Despawning immediately.");
-                OnNPCExited?.Invoke(this);
-                Destroy(gameObject);
+                DespawnOrDestroy();
             }
             return;
         }
@@ -211,8 +249,7 @@ public class NPCInteractionController : MonoBehaviour
         {
             DebugLog("[NPC] Reached exit. Goodbye!");
             _hasStartedMoving = false;
-            OnNPCExited?.Invoke(this);
-            Destroy(gameObject);
+            DespawnOrDestroy();
         }
     }
 
@@ -278,8 +315,12 @@ public class NPCInteractionController : MonoBehaviour
     /// </summary>
     private void HandlePickupState()
     {
-        // Trigger pickup animation event
-        OnPickupStart?.Invoke();
+        // Trigger pickup animation on all clients (including host) via ClientRpc.
+        // Fall back to the C# event when NGO is not running (editor solo testing).
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            TriggerPickupAnimationClientRpc();
+        else
+            OnPickupStart?.Invoke();
 
         InteractableItem pickedItem = null;
 
@@ -399,8 +440,7 @@ public class NPCInteractionController : MonoBehaviour
             else
             {
                 Debug.LogWarning("[NPC] Checkout triggered but no exit point assigned! Despawning immediately.");
-                OnNPCExited?.Invoke(this);
-                Destroy(gameObject);
+                DespawnOrDestroy();
             }
         }
     }
@@ -410,8 +450,11 @@ public class NPCInteractionController : MonoBehaviour
     /// </summary>
     private void HandlePlacingState()
     {
-        // Trigger place animation event
-        OnPlaceStart?.Invoke();
+        // Trigger place animation on all clients via ClientRpc (NGO) or C# event (solo).
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            TriggerPlaceAnimationClientRpc();
+        else
+            OnPlaceStart?.Invoke();
 
         DebugLog($"[NPC] HandlePlacingState: heldItems={_heldItems.Count}, counterSlots={counterSlots.Count}");
 
@@ -986,6 +1029,36 @@ public class NPCInteractionController : MonoBehaviour
     public string GetCurrentState()
     {
         return _currentState.ToString();
+    }
+
+    // ── Network helpers ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Fires OnNPCExited then despawns via NGO (all clients) or destroys locally (non-networked).
+    /// Always call this instead of Destroy(gameObject) so clients stay in sync.
+    /// </summary>
+    private void DespawnOrDestroy()
+    {
+        OnNPCExited?.Invoke(this);
+        NetworkObject netObj = GetComponent<NetworkObject>();
+        if (netObj != null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            netObj.Despawn(true);   // Despawn + destroy on all clients
+        else
+            Destroy(gameObject);
+    }
+
+    /// <summary>Fires on all clients (including host) to trigger the pickup animation.</summary>
+    [ClientRpc]
+    private void TriggerPickupAnimationClientRpc()
+    {
+        GetComponent<NPCAnimationController>()?.TriggerPickup();
+    }
+
+    /// <summary>Fires on all clients (including host) to trigger the place animation.</summary>
+    [ClientRpc]
+    private void TriggerPlaceAnimationClientRpc()
+    {
+        GetComponent<NPCAnimationController>()?.TriggerPlace();
     }
 
     private void OnDrawGizmosSelected()

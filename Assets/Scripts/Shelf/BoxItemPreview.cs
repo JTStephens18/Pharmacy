@@ -1,4 +1,5 @@
 using System.Collections;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -126,7 +127,22 @@ public class BoxItemPreview : MonoBehaviour
         if (category == null || category.prefab == null || slot == null)
             return null;
 
-        GameObject instance = Instantiate(category.prefab, slot);
+        // Instantiate WITHOUT a parent first. If the prefab has a NetworkObject,
+        // parenting during Instantiate (or any later SetParent) throws a
+        // SpawnStateException because the object hasn't been network-spawned.
+        GameObject instance = Instantiate(category.prefab);
+
+        // Strip all NetworkBehaviour components (e.g. NetworkTransform) before removing
+        // NetworkObject — NGO's [RequireComponent] chain means dependents must go first.
+        // Preview items are local-only visuals and must never be registered with NGO.
+        foreach (NetworkBehaviour nb in instance.GetComponentsInChildren<NetworkBehaviour>())
+            DestroyImmediate(nb);
+        NetworkObject netObj = instance.GetComponent<NetworkObject>();
+        if (netObj != null)
+            DestroyImmediate(netObj);
+
+        // Now safe to parent — no NGO hook will intercept the transform change.
+        instance.transform.SetParent(slot);
 
         // Reset local transform so the slot anchor controls positioning
         instance.transform.localPosition = Vector3.zero;
