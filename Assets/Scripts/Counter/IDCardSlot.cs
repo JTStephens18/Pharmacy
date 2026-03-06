@@ -1,4 +1,5 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 /// <summary>
@@ -79,6 +80,24 @@ public class IDCardSlot : MonoBehaviour
         {
             // Network-spawn: Initialize() will be called on all clients via ClientRpc from NPCInteractionController.
             cardNetObj.Spawn();
+
+            // Force-sync the correct position to all clients via Teleport().
+            // NetworkTransform may capture the prefab's default position during spawn;
+            // Teleport() overrides that and syncs immediately without interpolation.
+            Vector3 targetPos = transform.TransformPoint(positionOffset);
+            Quaternion targetRot = transform.rotation * Quaternion.Euler(rotationOffset);
+            NetworkTransform netTransform = _placedIDCard.GetComponent<NetworkTransform>();
+            if (netTransform != null)
+            {
+                netTransform.Teleport(targetPos, targetRot, _placedIDCard.transform.localScale);
+            }
+            else
+            {
+                // No NetworkTransform — just set directly (spawn message carries initial position)
+                _placedIDCard.transform.position = targetPos;
+                _placedIDCard.transform.rotation = targetRot;
+            }
+
             Debug.Log($"[IDCardSlot] Network-spawned ID card for '{identity.fullName}' in slot '{gameObject.name}'");
         }
         else

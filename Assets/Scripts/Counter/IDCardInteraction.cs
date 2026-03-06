@@ -32,9 +32,9 @@ public class IDCardInteraction : NetworkBehaviour
 
     [Header("Focus Settings")]
     [Tooltip("Distance above the ID card for the auto-generated focus camera position.")]
-    [SerializeField] private float focusHeight = 0.3f;
+    [SerializeField] private float focusHeight = 0.5f;
     [Tooltip("How far back from the card center the camera should sit.")]
-    [SerializeField] private float focusDistance = 0.15f;
+    [SerializeField] private float focusDistance = 0.25f;
 
     [Header("Hover Highlight")]
     [Tooltip("Color of the highlight outline when hovering over the barcode.")]
@@ -59,6 +59,7 @@ public class IDCardInteraction : NetworkBehaviour
     private Camera _cachedCamera;
     private LineRenderer _highlightRenderer;
     private bool _isHovering;
+    private bool _ownsAutoFocusTarget; // true if we created the focus target (needs manual cleanup)
 
     /// <summary>Whether the player is currently focused on this ID card.</summary>
     public bool IsActive => _isActive;
@@ -112,13 +113,22 @@ public class IDCardInteraction : NetworkBehaviour
     private void CreateAutoFocusTarget()
     {
         GameObject focusObj = new GameObject("IDCard_AutoFocusTarget");
-        focusObj.transform.SetParent(transform);
-        // Position above and slightly in front of the card
-        focusObj.transform.localPosition = new Vector3(0f, focusHeight, -focusDistance);
-        // Look down at the card
-        focusObj.transform.LookAt(transform.position, transform.up);
+        // Don't parent to the card — non-uniform scale on the card mesh
+        // causes LookAt/rotation to be skewed when computed as a child.
+        // Use the card's rotation (without scale) to compute the world-space offset.
+        Vector3 offset = transform.rotation * new Vector3(0f, focusHeight, -focusDistance);
+        focusObj.transform.position = transform.position + offset;
+        focusObj.transform.LookAt(transform.position, Vector3.up);
         _focusCameraTarget = focusObj.transform;
+        _ownsAutoFocusTarget = true;
         Debug.Log("[IDCardInteraction] Auto-generated focus camera target above ID card.");
+    }
+
+    void OnDestroy()
+    {
+        // Clean up the unparented auto-generated focus target
+        if (_ownsAutoFocusTarget && _focusCameraTarget != null)
+            Destroy(_focusCameraTarget.gameObject);
     }
 
     // ── Highlight Outline ─────────────────────────────────────────

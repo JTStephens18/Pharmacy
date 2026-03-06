@@ -1004,7 +1004,7 @@ public class NPCInteractionController : NetworkBehaviour
     /// Called on all clients after the ID card NetworkObject is spawned.
     /// Reads the NPC's local npcIdentity reference (already present on every client)
     /// and initializes the card's interaction component.
-    /// focusCameraTarget is null here — IDCardInteraction will auto-generate one above the card.
+    /// The focusCameraTarget is read from the IDCardSlot (a scene object that exists on every client).
     /// </summary>
     [ClientRpc]
     private void InitializeIDCardClientRpc(ulong cardNetworkObjectId)
@@ -1019,8 +1019,10 @@ public class NPCInteractionController : NetworkBehaviour
         if (interaction == null) return;
 
         // npcIdentity is serialized on the prefab — available on all clients without network transfer.
-        // Pass null for focusCameraTarget: IDCardInteraction auto-generates a target above the card.
-        interaction.Initialize(npcIdentity, null);
+        // idCardSlot is a scene object (injected by NPCSpawnManager) — its focusCameraTarget
+        // exists on every client, so we read it directly instead of sending over RPC.
+        Transform focusTarget = idCardSlot != null ? idCardSlot.FocusCameraTarget : null;
+        interaction.Initialize(npcIdentity, focusTarget);
         DebugLog($"[NPC] ID card initialized on client for '{npcIdentity?.fullName}'.");
     }
 
