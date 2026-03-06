@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Button inside the NPCInfoPanel that triggers dialogue with the displayed NPC.
-/// Orchestrates: exit computer focus → start dialogue → re-enter computer focus.
+/// Orchestrates: exit computer focus → start dialogue → return to player camera.
 /// Replaces ComputerDialogueButton.
 /// </summary>
 [RequireComponent(typeof(Button))]
@@ -139,8 +139,6 @@ public class NPCInfoTalkButton : MonoBehaviour
     private void OnComputerExitComplete(NPCDialogueTrigger trigger)
     {
         // Phase 2: focus has fully exited — start info dialogue
-        // Suppress EndDialogue's control reset so re-entering computer focus is seamless
-        PlayerComponents.Local?.Dialogue?.SetSuppressEndReset(true);
         trigger.StartInfoDialogue(dialogueKey);
     }
 
@@ -155,11 +153,11 @@ public class NPCInfoTalkButton : MonoBehaviour
             _subscribedDm = null;
         }
 
-        // Phase 3: dialogue finished — re-enter computer focus
-        Debug.Log("[NPCInfoTalkButton] Dialogue ended, reactivating computer focus.");
+        // Phase 3: dialogue finished — fully deactivate computer and return to player camera
+        Debug.Log("[NPCInfoTalkButton] Dialogue ended, deactivating computer screen.");
 
         if (_computerScreen != null)
-            _computerScreen.ReactivateAfterDialogue();
+            _computerScreen.Deactivate();
 
         _isOrchestrating = false;
     }
