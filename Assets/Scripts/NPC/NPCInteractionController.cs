@@ -972,7 +972,8 @@ public class NPCInteractionController : NetworkBehaviour
 
     /// <summary>
     /// Places the NPC's ID card on the counter slot.
-    /// Called when the NPC finishes placing items.
+    /// Called when the NPC finishes placing items (server-only path).
+    /// If the card is a NetworkObject, all clients are told to initialize it via ClientRpc.
     /// </summary>
     public void PlaceIDCard()
     {
@@ -984,12 +985,47 @@ public class NPCInteractionController : NetworkBehaviour
         }
 
         _hasPlacedIDCard = true;
-        idCardSlot.PlaceIDCard(idCardPrefab, npcIdentity);
+        IDCardInteraction cardInteraction = idCardSlot.PlaceIDCard(idCardPrefab, npcIdentity);
+
+        // If the card was network-spawned, tell all clients to initialize it.
+        // npcIdentity is a ScriptableObject reference that already exists on every client's
+        // copy of this NPC prefab, so we don't need to send it over the wire.
+        if (cardInteraction != null)
+        {
+            NetworkObject cardNetObj = cardInteraction.GetComponent<NetworkObject>();
+            if (cardNetObj != null && cardNetObj.IsSpawned)
+                InitializeIDCardClientRpc(cardNetObj.NetworkObjectId);
+        }
+
         DebugLog($"[NPC] Placed ID card for '{npcIdentity.fullName}' on counter.");
     }
 
     /// <summary>
-    /// Removes the ID card from the counter and clears the computer NPC info.
+    /// Called on all clients after the ID card NetworkObject is spawned.
+    /// Reads the NPC's local npcIdentity reference (already present on every client)
+    /// and initializes the card's interaction component.
+    /// focusCameraTarget is null here — IDCardInteraction will auto-generate one above the card.
+    /// </summary>
+    [ClientRpc]
+    private void InitializeIDCardClientRpc(ulong cardNetworkObjectId)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(cardNetworkObjectId, out NetworkObject cardNetObj))
+        {
+            Debug.LogWarning($"[NPC] InitializeIDCardClientRpc: card {cardNetworkObjectId} not found on this client.");
+            return;
+        }
+
+        IDCardInteraction interaction = cardNetObj.GetComponent<IDCardInteraction>();
+        if (interaction == null) return;
+
+        // npcIdentity is serialized on the prefab — available on all clients without network transfer.
+        // Pass null for focusCameraTarget: IDCardInteraction auto-generates a target above the card.
+        interaction.Initialize(npcIdentity, null);
+        DebugLog($"[NPC] ID card initialized on client for '{npcIdentity?.fullName}'.");
+    }
+
+    /// <summary>
+    /// Removes the ID card from the counter and clears the computer NPC info on all clients.
     /// Called when the NPC is destroyed (exits the store).
     /// </summary>
     public void CleanupIDCard()
@@ -997,17 +1033,23 @@ public class NPCInteractionController : NetworkBehaviour
         if (!_hasPlacedIDCard) return;
 
         if (idCardSlot != null)
-        {
             idCardSlot.RemoveIDCard();
-        }
 
-        if (NPCInfoDisplay.Instance != null)
-        {
-            NPCInfoDisplay.Instance.ClearNPCInfo();
-        }
+        // Clear NPCInfoDisplay on all clients (not just the server).
+        ClearIDCardClientRpc();
 
         _hasPlacedIDCard = false;
         DebugLog("[NPC] ID card cleaned up.");
+    }
+
+    /// <summary>
+    /// Clears the NPC info panel on every client's computer screen.
+    /// </summary>
+    [ClientRpc]
+    private void ClearIDCardClientRpc()
+    {
+        if (NPCInfoDisplay.Instance != null)
+            NPCInfoDisplay.Instance.ClearNPCInfo();
     }
 
     private void OnDestroy()

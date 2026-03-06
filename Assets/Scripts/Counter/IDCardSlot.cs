@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -52,24 +53,46 @@ public class IDCardSlot : MonoBehaviour
             return null;
         }
 
-        // Instantiate and position
-        _placedIDCard = Instantiate(idCardPrefab, transform);
-        _placedIDCard.transform.localPosition = positionOffset;
-        _placedIDCard.transform.localRotation = Quaternion.Euler(rotationOffset);
+        // Networked: position in world space — NGO forbids parenting NetworkObjects to non-NetworkObjects.
+        // Local fallback: parent to slot as before.
+        NetworkObject prefabNetObj = idCardPrefab.GetComponent<NetworkObject>();
+        if (prefabNetObj != null)
+        {
+            _placedIDCard = Instantiate(idCardPrefab);
+            _placedIDCard.transform.position = transform.TransformPoint(positionOffset);
+            _placedIDCard.transform.rotation = transform.rotation * Quaternion.Euler(rotationOffset);
+        }
+        else
+        {
+            _placedIDCard = Instantiate(idCardPrefab, transform);
+            _placedIDCard.transform.localPosition = positionOffset;
+            _placedIDCard.transform.localRotation = Quaternion.Euler(rotationOffset);
+        }
 
-        // Initialize the interaction component
+        // Cache the interaction component reference
         _placedInteraction = _placedIDCard.GetComponent<IDCardInteraction>();
         if (_placedInteraction == null)
             _placedInteraction = _placedIDCard.GetComponentInChildren<IDCardInteraction>();
 
-        if (_placedInteraction != null)
+        NetworkObject cardNetObj = _placedIDCard.GetComponent<NetworkObject>();
+        if (cardNetObj != null)
         {
-            _placedInteraction.Initialize(identity, focusCameraTarget);
-            Debug.Log($"[IDCardSlot] Placed ID card for '{identity.fullName}' in slot '{gameObject.name}'");
+            // Network-spawn: Initialize() will be called on all clients via ClientRpc from NPCInteractionController.
+            cardNetObj.Spawn();
+            Debug.Log($"[IDCardSlot] Network-spawned ID card for '{identity.fullName}' in slot '{gameObject.name}'");
         }
         else
         {
-            Debug.LogWarning("[IDCardSlot] ID card prefab has no IDCardInteraction component!");
+            // Local fallback: initialize directly.
+            if (_placedInteraction != null)
+            {
+                _placedInteraction.Initialize(identity, focusCameraTarget);
+                Debug.Log($"[IDCardSlot] Placed ID card (local) for '{identity.fullName}' in slot '{gameObject.name}'");
+            }
+            else
+            {
+                Debug.LogWarning("[IDCardSlot] ID card prefab has no IDCardInteraction component!");
+            }
         }
 
         return _placedInteraction;
@@ -84,7 +107,13 @@ public class IDCardSlot : MonoBehaviour
         if (_placedIDCard != null)
         {
             Debug.Log($"[IDCardSlot] Removing ID card from slot '{gameObject.name}'");
-            Destroy(_placedIDCard);
+
+            NetworkObject cardNetObj = _placedIDCard.GetComponent<NetworkObject>();
+            if (cardNetObj != null && cardNetObj.IsSpawned)
+                cardNetObj.Despawn(true);
+            else
+                Destroy(_placedIDCard);
+
             _placedIDCard = null;
             _placedInteraction = null;
         }
