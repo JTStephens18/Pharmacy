@@ -1,13 +1,21 @@
 using System.Collections;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
 /// Portable container that holds a fixed number of items for shelf restocking.
 /// Items are category-agnostic — the ItemPlacementManager decides what to spawn.
-/// Attach to a pickupable object (requires Rigidbody).
+/// Attach to a pickupable object (requires Rigidbody + NetworkObject).
+///
+/// Networked behaviour:
+///   - _networkRemainingItems and _networkIsDestroying are server-authoritative.
+///   - Decrement() is safe to call only on the server (or in the non-spawned fallback path).
+///   - When the box empties, the server sends ShrinkAndForceDropClientRpc() so all clients
+///     play the shrink animation and the holder force-drops it, then the server despawns.
+///   - Visual open/close animations are local-only (only the holding player sees them).
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
-public class InventoryBox : MonoBehaviour
+public class InventoryBox : NetworkBehaviour
 {
     [Header("Inventory")]
     [Tooltip("Total number of items this box can dispense before being destroyed.")]
@@ -30,39 +38,218 @@ public class InventoryBox : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool logOperations = false;
 
-    private int _remainingItems;
-    private bool _isDestroying = false;
-    private bool _isOpen = false;
+    // ── Networked State ───────────────────────────────────────────────
+    // Server-authoritative. All clients can read these values.
+
+    private readonly NetworkVariable<int> _networkRemainingItems = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private readonly NetworkVariable<bool> _networkIsDestroying = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    // ── Local Fallback State ──────────────────────────────────────────
+    // Used when the box is not yet spawned as a NetworkObject (editor / pre-networking path).
+
+    private int _localRemainingItems;
+    private bool _localIsDestroying;
+
+    // ── Visual State (local only) ─────────────────────────────────────
+    // Only the holding player triggers open/close — no need to sync.
+
+    private bool _isOpen;
     private Coroutine _openCloseCoroutine;
     private Vector3 _closedModelOriginalScale;
     private Vector3 _openModelOriginalScale;
 
-    /// <summary>
-    /// Whether the box is currently in the open visual state.
-    /// </summary>
     public bool IsOpen => _isOpen;
+
+    // ─────────────────────────────────────────────────────────────────
+    // Unity / NGO lifecycle
+    // ─────────────────────────────────────────────────────────────────
 
     private void Awake()
     {
-        _remainingItems = totalItems;
+        _localRemainingItems = totalItems;
 
-        // Cache original scales before any animation modifies them
         if (closedModel != null) _closedModelOriginalScale = closedModel.transform.localScale;
-        if (openModel != null) _openModelOriginalScale = openModel.transform.localScale;
+        if (openModel != null)   _openModelOriginalScale   = openModel.transform.localScale;
 
-        // Start with closed model visible, open model hidden
         if (closedModel != null) closedModel.SetActive(true);
-        if (openModel != null) openModel.SetActive(false);
+        if (openModel != null)   openModel.SetActive(false);
     }
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
+        {
+            _networkRemainingItems.Value = totalItems;
+            _networkIsDestroying.Value   = false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Stock queries — read NetworkVariables when spawned, local fields otherwise
+    // ─────────────────────────────────────────────────────────────────
+
+    public bool HasAnyStock()
+    {
+        if (!IsSpawned)
+            return _localRemainingItems > 0 && !_localIsDestroying;
+
+        return _networkRemainingItems.Value > 0 && !_networkIsDestroying.Value;
+    }
+
+    public int GetRemainingCount()
+    {
+        if (!IsSpawned) return _localRemainingItems;
+        return _networkRemainingItems.Value;
+    }
+
+    public int GetTotalCapacity() => totalItems;
+
+    // ─────────────────────────────────────────────────────────────────
+    // Decrement
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Removes one item from the box.
+    /// Networked: only the server executes this — call from PlaceItemOnShelfServerRpc.
+    /// Non-networked fallback: runs locally for editor/pre-networking testing.
+    /// </summary>
+    public void Decrement()
+    {
+        if (!IsSpawned)
+        {
+            // ── Non-networked fallback ────────────────────────────────
+            if (_localRemainingItems <= 0 || _localIsDestroying) return;
+
+            _localRemainingItems--;
+
+            if (logOperations)
+                Debug.Log($"[InventoryBox] Decremented (local). Remaining: {_localRemainingItems}/{totalItems}");
+
+            if (_localRemainingItems <= 0)
+                StartCoroutine(ShrinkAndDestroyLocal());
+
+            return;
+        }
+
+        // ── Networked path ────────────────────────────────────────────
+        if (!IsServer) return;
+        if (_networkRemainingItems.Value <= 0 || _networkIsDestroying.Value) return;
+
+        _networkRemainingItems.Value--;
+
+        if (logOperations)
+            Debug.Log($"[InventoryBox] Decremented. Remaining: {_networkRemainingItems.Value}/{totalItems}");
+
+        if (_networkRemainingItems.Value <= 0)
+            StartCoroutine(ShrinkAndDestroyOnServer());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Networked shrink & despawn
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Server-side: notifies all clients to play the shrink animation and force-drop
+    /// if held, then waits for the animation to finish before despawning.
+    /// </summary>
+    private IEnumerator ShrinkAndDestroyOnServer()
+    {
+        _networkIsDestroying.Value = true;
+
+        if (logOperations)
+            Debug.Log("[InventoryBox] Box empty — starting networked shrink.");
+
+        // Runs on all clients (and the host): plays visual shrink + force-drops if held
+        ShrinkAndForceDropClientRpc();
+
+        // Give clients enough time to finish the animation before the GO is destroyed
+        yield return new WaitForSeconds(shrinkDuration + 0.2f);
+
+        if (NetworkObject != null && NetworkObject.IsSpawned)
+            NetworkObject.Despawn(true);
+    }
+
+    /// <summary>
+    /// Runs on every client when the box empties.
+    /// Plays the shrink animation and force-drops the box if this client is holding it.
+    /// </summary>
+    [ClientRpc]
+    private void ShrinkAndForceDropClientRpc()
+    {
+        // Force-drop on the client that is holding this box
+        PlayerComponents pc = PlayerComponents.Local;
+        ObjectPickup pickup  = pc != null ? pc.Pickup : null;
+        if (pickup != null && pickup.GetHeldObject() == gameObject)
+            pickup.ForceDropObject();
+
+        StartCoroutine(ShrinkAnimation());
+    }
+
+    private IEnumerator ShrinkAnimation()
+    {
+        Vector3 startScale = transform.localScale;
+        float elapsed = 0f;
+
+        while (elapsed < shrinkDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / shrinkDuration);
+            transform.localScale = startScale * Mathf.SmoothStep(1f, 0f, t);
+            yield return null;
+        }
+
+        transform.localScale = Vector3.zero;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Local fallback shrink & destroy (non-networked path)
+    // ─────────────────────────────────────────────────────────────────
+
+    private IEnumerator ShrinkAndDestroyLocal()
+    {
+        _localIsDestroying = true;
+
+        if (logOperations)
+            Debug.Log("[InventoryBox] Box empty — starting local shrink.");
+
+        Vector3 startScale = transform.localScale;
+        float elapsed = 0f;
+
+        while (elapsed < shrinkDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / shrinkDuration);
+            transform.localScale = startScale * Mathf.SmoothStep(1f, 0f, t);
+            yield return null;
+        }
+
+        transform.localScale = Vector3.zero;
+
+        PlayerComponents pc = PlayerComponents.Local;
+        ObjectPickup pickup  = pc != null ? pc.Pickup : null;
+        if (pickup != null && pickup.GetHeldObject() == gameObject)
+            pickup.ForceDropObject();
+
+        Destroy(gameObject);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Box visuals — local only, driven by ItemPlacementManager on the owner
+    // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Transitions to the open visual state with a scale-up animation.
     /// </summary>
     public void OpenBox()
     {
-        if (_isOpen || _isDestroying) return;
-        _isOpen = true;
+        if (_isOpen) return;
+        bool destroying = IsSpawned ? _networkIsDestroying.Value : _localIsDestroying;
+        if (destroying) return;
 
+        _isOpen = true;
         StopAndResetOpenClose();
         _openCloseCoroutine = StartCoroutine(AnimateOpenClose(open: true));
     }
@@ -72,17 +259,15 @@ public class InventoryBox : MonoBehaviour
     /// </summary>
     public void CloseBox()
     {
-        if (!_isOpen || _isDestroying) return;
-        _isOpen = false;
+        if (!_isOpen) return;
+        bool destroying = IsSpawned ? _networkIsDestroying.Value : _localIsDestroying;
+        if (destroying) return;
 
+        _isOpen = false;
         StopAndResetOpenClose();
         _openCloseCoroutine = StartCoroutine(AnimateOpenClose(open: false));
     }
 
-    /// <summary>
-    /// Stops any in-progress open/close animation and restores both models
-    /// to their original scales so the next animation starts clean.
-    /// </summary>
     private void StopAndResetOpenClose()
     {
         if (_openCloseCoroutine != null)
@@ -91,18 +276,15 @@ public class InventoryBox : MonoBehaviour
             _openCloseCoroutine = null;
         }
 
-        // Reset scales so a half-finished animation doesn't corrupt future ones
         if (closedModel != null) closedModel.transform.localScale = _closedModelOriginalScale;
-        if (openModel != null) openModel.transform.localScale = _openModelOriginalScale;
+        if (openModel != null)   openModel.transform.localScale   = _openModelOriginalScale;
     }
 
     private IEnumerator AnimateOpenClose(bool open)
     {
-        // The model being revealed scales from 0 → original
-        // The model being hidden is instantly deactivated
-        GameObject showModel = open ? openModel : closedModel;
-        GameObject hideModel = open ? closedModel : openModel;
-        Vector3 targetScale = open ? _openModelOriginalScale : _closedModelOriginalScale;
+        GameObject showModel  = open ? openModel   : closedModel;
+        GameObject hideModel  = open ? closedModel : openModel;
+        Vector3    targetScale = open ? _openModelOriginalScale : _closedModelOriginalScale;
 
         if (hideModel != null)
             hideModel.SetActive(false);
@@ -127,90 +309,10 @@ public class InventoryBox : MonoBehaviour
         _openCloseCoroutine = null;
     }
 
-    /// <summary>
-    /// Returns true if the box still has items to dispense.
-    /// </summary>
-    public bool HasAnyStock()
-    {
-        return _remainingItems > 0 && !_isDestroying;
-    }
-
-    /// <summary>
-    /// Gets the number of items remaining in the box.
-    /// </summary>
-    public int GetRemainingCount()
-    {
-        return _remainingItems;
-    }
-
-    /// <summary>
-    /// Gets the total starting capacity of the box.
-    /// </summary>
-    public int GetTotalCapacity()
-    {
-        return totalItems;
-    }
-
-    /// <summary>
-    /// Decrements the item count by one. If the box is now empty,
-    /// triggers the shrink animation and destroys the box.
-    /// </summary>
-    public void Decrement()
-    {
-        if (_remainingItems <= 0 || _isDestroying) return;
-
-        _remainingItems--;
-
-        if (logOperations)
-            Debug.Log($"[InventoryBox] Decremented. Remaining: {_remainingItems}/{totalItems}");
-
-        if (_remainingItems <= 0)
-        {
-            StartCoroutine(ShrinkAndDestroy());
-        }
-    }
-
-    /// <summary>
-    /// Smoothly shrinks the box to zero scale, then destroys it.
-    /// </summary>
-    private IEnumerator ShrinkAndDestroy()
-    {
-        _isDestroying = true;
-
-        if (logOperations)
-            Debug.Log("[InventoryBox] Box is empty. Starting shrink animation...");
-
-        Vector3 startScale = transform.localScale;
-        float elapsed = 0f;
-
-        while (elapsed < shrinkDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / shrinkDuration);
-            // SmoothStep gives a nice ease-in-out curve
-            float smooth = Mathf.SmoothStep(1f, 0f, t);
-            transform.localScale = startScale * smooth;
-            yield return null;
-        }
-
-        transform.localScale = Vector3.zero;
-
-        // Force drop if player is holding this box
-        PlayerComponents pc = PlayerComponents.Local;
-        ObjectPickup pickup = pc != null ? pc.Pickup : null;
-        if (pickup != null && pickup.GetHeldObject() == gameObject)
-        {
-            pickup.ForceDropObject();
-        }
-
-        Destroy(gameObject);
-    }
-
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if (totalItems < 1)
-            totalItems = 1;
+        if (totalItems < 1) totalItems = 1;
     }
 #endif
 }

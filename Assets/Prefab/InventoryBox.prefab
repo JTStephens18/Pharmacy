@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 5743586360569350740}
   - component: {fileID: 3911207179974676880}
   - component: {fileID: 5189152683763310817}
+  - component: {fileID: 8278631003194631181}
   - component: {fileID: 7890750773618924980}
   - component: {fileID: 6660880024590941520}
-  - component: {fileID: 8278631003194631181}
   - component: {fileID: 7994480094131879661}
   m_Layer: 0
   m_Name: InventoryBox
@@ -87,39 +87,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &7890750773618924980
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1473405913546472473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d52e9f48e8c0a3741a540c5bff6cba1e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  totalItems: 8
-  closedModel: {fileID: 3134359785373733205}
-  openModel: {fileID: 7379608554733078740}
-  openCloseDuration: 0.3
-  shrinkDuration: 0.5
-  logOperations: 0
---- !u!114 &6660880024590941520
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1473405913546472473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2951d33fd4b134e4288c114b39169a0d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  itemSlot1: {fileID: 3321714947645572602}
-  itemSlot2: {fileID: 4608509352641158663}
-  swapAnimDuration: 0.25
 --- !u!114 &8278631003194631181
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -145,6 +112,40 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &7890750773618924980
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473405913546472473}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d52e9f48e8c0a3741a540c5bff6cba1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  totalItems: 8
+  closedModel: {fileID: 3134359785373733205}
+  openModel: {fileID: 7379608554733078740}
+  openCloseDuration: 0.3
+  shrinkDuration: 0.5
+  logOperations: 0
+--- !u!114 &6660880024590941520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473405913546472473}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2951d33fd4b134e4288c114b39169a0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  itemSlot1: {fileID: 3321714947645572602}
+  itemSlot2: {fileID: 4608509352641158663}
+  swapAnimDuration: 0.25
 --- !u!114 &7994480094131879661
 MonoBehaviour:
   m_ObjectHideFlags: 0
