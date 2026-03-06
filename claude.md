@@ -889,6 +889,7 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 | `ObjectPickup.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
 | `FocusStateManager.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
 | `ItemPlacementManager.cs` | `MonoBehaviour` → `NetworkBehaviour` | `if (!IsOwner) return;` in `Update()` |
+| `NPCDialogueTrigger.cs` | `MonoBehaviour` → `NetworkBehaviour` | `NetworkVariable<ulong> _dialogueOwnerId` lock — only one player can dialogue with an NPC at a time. `NetworkVariable<bool> _initialDialogueCompleted` prevents auto-trigger for other players once one player completes it. Requests go through `RequestDialogueLockServerRpc` → `GrantDialogueLockClientRpc`. Lock released via `ReleaseDialogueLockServerRpc` when dialogue ends. Non-spawned fallback retained for editor testing. |
 
 ### Scripts Left Unchanged (already safe)
 

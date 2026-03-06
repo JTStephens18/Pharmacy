@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -21,9 +22,14 @@ public class InfoDialogueEntry
 /// Monitors NPC state and automatically triggers dialogue when the NPC
 /// is waiting for checkout and the player is within range + has line of sight.
 /// Also supports starting new conversations from the computer screen.
+///
+/// Multiplayer: only one player can dialogue with an NPC at a time.
+/// A NetworkVariable lock prevents other players from starting dialogue
+/// while one player is already talking. The initial auto-trigger dialogue
+/// is synced — once any player completes it, it won't auto-trigger for others.
 /// </summary>
 [RequireComponent(typeof(NPCInteractionController))]
-public class NPCDialogueTrigger : MonoBehaviour
+public class NPCDialogueTrigger : NetworkBehaviour
 {
     [Header("Dialogue Data")]
     [Tooltip("JSON dialogue files for this NPC. Cycles through them for repeat conversations.")]
@@ -45,9 +51,25 @@ public class NPCDialogueTrigger : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
 
+    // ── Network State ────────────────────────────────────────────────
+    // Tracks which client currently "owns" dialogue with this NPC.
+    // ulong.MaxValue = nobody. Server-authoritative.
+    private NetworkVariable<ulong> _dialogueOwnerId = new NetworkVariable<ulong>(
+        ulong.MaxValue, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    // Once any player completes the initial auto-trigger dialogue, this is set
+    // to true so it won't auto-trigger for other players.
+    private NetworkVariable<bool> _initialDialogueCompleted = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    // ── Dialogue request types for RPC communication ─────────────────
+    private const byte REQUEST_AUTO = 0;
+    private const byte REQUEST_NEW_CONVERSATION = 1;
+    private const byte REQUEST_INFO = 2;
+
     // ── Runtime State ───────────────────────────────────────────────
     private NPCInteractionController _npcController;
-    private bool _hasTriggeredInitialDialogue;
+    private bool _hasTriggeredInitialDialogue; // local fallback for non-networked
     private int _dialogueIndex;
     private bool _dialogueInProgress;
 
@@ -65,6 +87,20 @@ public class NPCDialogueTrigger : MonoBehaviour
     // Each client checks their own player — avoids cross-client dialogue triggers.
     private Transform PlayerTransform =>
         PlayerComponents.Local?.Movement?.transform;
+
+    /// <summary>
+    /// Whether another player currently has the dialogue lock on this NPC.
+    /// </summary>
+    public bool IsLockedByAnotherPlayer
+    {
+        get
+        {
+            if (!IsSpawned) return false;
+            ulong owner = _dialogueOwnerId.Value;
+            if (owner == ulong.MaxValue) return false;
+            return owner != NetworkManager.Singleton.LocalClientId;
+        }
+    }
 
     void Awake()
     {
@@ -92,7 +128,7 @@ public class NPCDialogueTrigger : MonoBehaviour
     void Update()
     {
         // Only auto-trigger the first dialogue when NPC reaches WaitingForCheckout
-        if (!_hasTriggeredInitialDialogue && !_dialogueInProgress && CanTriggerDialogue())
+        if (!IsInitialDialogueCompleted() && !_dialogueInProgress && CanTriggerDialogue())
         {
             TryStartDialogue();
         }
@@ -112,6 +148,12 @@ public class NPCDialogueTrigger : MonoBehaviour
             return;
         }
 
+        if (IsLockedByAnotherPlayer)
+        {
+            DebugLog("[NPCDialogueTrigger] Another player is in dialogue with this NPC.");
+            return;
+        }
+
         if (dialogueFiles == null || dialogueFiles.Length == 0)
         {
             Debug.LogWarning("[NPCDialogueTrigger] No dialogue files assigned!");
@@ -120,7 +162,16 @@ public class NPCDialogueTrigger : MonoBehaviour
 
         // Advance to next dialogue file (cycle)
         _dialogueIndex = (_dialogueIndex + 1) % dialogueFiles.Length;
-        LoadAndStartDialogue(_dialogueIndex);
+
+        if (IsSpawned)
+        {
+            RequestDialogueLockServerRpc(REQUEST_NEW_CONVERSATION, _dialogueIndex, "");
+        }
+        else
+        {
+            // Non-networked fallback
+            DoLoadAndStartDialogue(_dialogueIndex);
+        }
     }
 
     /// <summary>
@@ -136,30 +187,28 @@ public class NPCDialogueTrigger : MonoBehaviour
             return;
         }
 
-        if (string.IsNullOrEmpty(key) || _infoDialogueLookup == null || !_infoDialogueLookup.TryGetValue(key, out TextAsset dialogueFile))
+        if (IsLockedByAnotherPlayer)
+        {
+            DebugLog("[NPCDialogueTrigger] Another player is in dialogue with this NPC.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(key) || _infoDialogueLookup == null || !_infoDialogueLookup.ContainsKey(key))
         {
             Debug.LogWarning($"[NPCDialogueTrigger] No info dialogue found for key '{key}'. Falling back to StartNewConversation.");
             StartNewConversation();
             return;
         }
 
-        DialogueManager dm = PlayerComponents.Local?.Dialogue;
-        if (dm == null)
+        if (IsSpawned)
         {
-            Debug.LogWarning("[NPCDialogueTrigger] No DialogueManager found on local player.");
-            return;
+            RequestDialogueLockServerRpc(REQUEST_INFO, 0, key);
         }
-
-        _loadedData = DialogueLoader.Load(dialogueFile, out _loadedLookup);
-        if (_loadedData == null || _loadedLookup == null) return;
-
-        string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
-
-        _dialogueInProgress = true;
-        SubscribeToDialogueEnd(dm);
-        dm.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
-
-        DebugLog($"[NPCDialogueTrigger] Started info dialogue '{_loadedData.dialogueId}' (key: '{key}')");
+        else
+        {
+            // Non-networked fallback
+            DoStartInfoDialogue(key);
+        }
     }
 
     /// <summary>
@@ -172,11 +221,15 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     /// <summary>
     /// Whether this NPC is currently in a state where dialogue can occur.
+    /// Checks both local state and the network dialogue lock.
     /// </summary>
     public bool IsAvailableForDialogue()
     {
         if (_npcController == null) return false;
         if (_dialogueInProgress) return false;
+
+        // If another player has the dialogue lock, this NPC is unavailable
+        if (IsLockedByAnotherPlayer) return false;
 
         return _npcController.GetCurrentState() == "WaitingForCheckout";
     }
@@ -186,7 +239,88 @@ public class NPCDialogueTrigger : MonoBehaviour
     /// </summary>
     public bool IsDialogueInProgress => _dialogueInProgress;
 
+    // ── Network RPCs ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Client requests the dialogue lock from the server.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestDialogueLockServerRpc(byte requestType, int dialogueIndex, string infoKey, ServerRpcParams rpcParams = default)
+    {
+        ulong requesterId = rpcParams.Receive.SenderClientId;
+
+        // Deny if already locked by someone else
+        if (_dialogueOwnerId.Value != ulong.MaxValue)
+        {
+            DebugLog($"[NPCDialogueTrigger] Lock denied for client {requesterId} — already owned by {_dialogueOwnerId.Value}");
+            return;
+        }
+
+        // For auto-trigger, deny if initial dialogue already completed
+        if (requestType == REQUEST_AUTO && _initialDialogueCompleted.Value)
+        {
+            DebugLog($"[NPCDialogueTrigger] Auto-trigger denied for client {requesterId} — already completed by another player");
+            return;
+        }
+
+        // Grant the lock
+        _dialogueOwnerId.Value = requesterId;
+
+        if (requestType == REQUEST_AUTO)
+            _initialDialogueCompleted.Value = true;
+
+        // Tell the requesting client to start their dialogue locally
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { requesterId } }
+        };
+        GrantDialogueLockClientRpc(requestType, dialogueIndex, infoKey, clientRpcParams);
+    }
+
+    /// <summary>
+    /// Server tells the requesting client that the lock was granted — start dialogue locally.
+    /// </summary>
+    [ClientRpc]
+    private void GrantDialogueLockClientRpc(byte requestType, int dialogueIndex, string infoKey, ClientRpcParams clientRpcParams = default)
+    {
+        switch (requestType)
+        {
+            case REQUEST_AUTO:
+                DoLoadAndStartDialogue(0);
+                break;
+            case REQUEST_NEW_CONVERSATION:
+                DoLoadAndStartDialogue(dialogueIndex);
+                break;
+            case REQUEST_INFO:
+                DoStartInfoDialogue(infoKey);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Client releases the dialogue lock after dialogue ends.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void ReleaseDialogueLockServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        if (_dialogueOwnerId.Value == senderId)
+        {
+            _dialogueOwnerId.Value = ulong.MaxValue;
+            DebugLog($"[NPCDialogueTrigger] Dialogue lock released by client {senderId}");
+        }
+    }
+
     // ── Private Helpers ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Whether the initial auto-trigger dialogue has been completed (by any player if networked).
+    /// </summary>
+    private bool IsInitialDialogueCompleted()
+    {
+        if (IsSpawned) return _initialDialogueCompleted.Value;
+        return _hasTriggeredInitialDialogue;
+    }
 
     private bool CanTriggerDialogue()
     {
@@ -204,6 +338,10 @@ public class NPCDialogueTrigger : MonoBehaviour
 
         // Check NPC state
         if (_npcController.GetCurrentState() != "WaitingForCheckout")
+            return false;
+
+        // If another player already has the dialogue lock, don't try
+        if (IsLockedByAnotherPlayer)
             return false;
 
         // Check player range
@@ -250,11 +388,23 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     private void TryStartDialogue()
     {
-        _hasTriggeredInitialDialogue = true;
-        LoadAndStartDialogue(0);
+        if (IsSpawned)
+        {
+            // Request lock from server — dialogue will start in GrantDialogueLockClientRpc
+            RequestDialogueLockServerRpc(REQUEST_AUTO, 0, "");
+        }
+        else
+        {
+            // Non-networked fallback
+            _hasTriggeredInitialDialogue = true;
+            DoLoadAndStartDialogue(0);
+        }
     }
 
-    private void LoadAndStartDialogue(int index)
+    /// <summary>
+    /// Actually loads and starts a dialogue file locally. Called after lock is granted.
+    /// </summary>
+    private void DoLoadAndStartDialogue(int index)
     {
         if (index < 0 || index >= dialogueFiles.Length)
         {
@@ -288,12 +438,47 @@ public class NPCDialogueTrigger : MonoBehaviour
         DebugLog($"[NPCDialogueTrigger] Started dialogue '{_loadedData.dialogueId}' (file index {index})");
     }
 
+    /// <summary>
+    /// Actually starts an info dialogue locally. Called after lock is granted.
+    /// </summary>
+    private void DoStartInfoDialogue(string key)
+    {
+        if (string.IsNullOrEmpty(key) || _infoDialogueLookup == null || !_infoDialogueLookup.TryGetValue(key, out TextAsset dialogueFile))
+        {
+            Debug.LogWarning($"[NPCDialogueTrigger] No info dialogue found for key '{key}'.");
+            return;
+        }
+
+        DialogueManager dm = PlayerComponents.Local?.Dialogue;
+        if (dm == null)
+        {
+            Debug.LogWarning("[NPCDialogueTrigger] No DialogueManager found on local player.");
+            return;
+        }
+
+        _loadedData = DialogueLoader.Load(dialogueFile, out _loadedLookup);
+        if (_loadedData == null || _loadedLookup == null) return;
+
+        string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
+
+        _dialogueInProgress = true;
+        SubscribeToDialogueEnd(dm);
+        dm.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
+
+        DebugLog($"[NPCDialogueTrigger] Started info dialogue '{_loadedData.dialogueId}' (key: '{key}')");
+    }
+
     private void OnDialogueEnded()
     {
         if (_dialogueInProgress)
         {
             _dialogueInProgress = false;
             UnsubscribeFromDialogueEnd();
+
+            // Release the network lock so other players can interact
+            if (IsSpawned)
+                ReleaseDialogueLockServerRpc();
+
             DebugLog("[NPCDialogueTrigger] Dialogue ended.");
         }
     }
