@@ -6,14 +6,16 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Singleton that drives the on-screen dialogue overlay.
+/// Per-player component that drives the on-screen dialogue overlay.
+/// Lives on the Player prefab; access via PlayerComponents.Local.Dialogue.
 /// Shows NPC dialogue text and spawns clickable response buttons.
 /// Smoothly lerps the camera to face the NPC when dialogue starts.
+///
+/// Multiplayer: each player has their own DialogueManager on their prefab.
+/// Only the owning client's instance is active (PlayerSetup enables/disables it).
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
-    public static DialogueManager Instance { get; private set; }
-
     [Header("UI References")]
     [Tooltip("Root panel for the dialogue overlay. Enabled/disabled to show/hide.")]
     [SerializeField] private GameObject dialoguePanel;
@@ -72,14 +74,6 @@ public class DialogueManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Debug.LogWarning("[DialogueManager] Duplicate instance found — destroying this one.");
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-
         _history = GetComponent<DialogueHistory>();
         if (_history == null)
             _history = GetComponentInChildren<DialogueHistory>();

@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -8,8 +9,11 @@ using UnityEngine;
 /// 4. Sending scanned data to NPCInfoDisplay to update the computer screen
 ///
 /// Detected by ObjectPickup via raycast, same as ComputerScreen / PillCountingStation.
+///
+/// Multiplayer: server-authoritative exclusive-access lock via NetworkVariable.
+/// Only one player can focus on the card at a time.
 /// </summary>
-public class IDCardInteraction : MonoBehaviour
+public class IDCardInteraction : NetworkBehaviour
 {
     [Header("Barcode Zone")]
     [Tooltip("Child collider covering the barcode area of the ID card. Player clicks this to scan.")]
@@ -37,6 +41,14 @@ public class IDCardInteraction : MonoBehaviour
     [SerializeField] private Color highlightColor = new Color(0f, 1f, 0.5f, 0.9f);
     [Tooltip("Width of the highlight outline.")]
     [SerializeField] private float highlightWidth = 0.003f;
+
+    // ── Networked Lock ────────────────────────────────────────────────
+    private const ulong NoUser = ulong.MaxValue;
+
+    private readonly NetworkVariable<ulong> _currentUserId = new NetworkVariable<ulong>(
+        ulong.MaxValue,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
 
     // ── Runtime State ───────────────────────────────────────────────
     private NPCIdentity _identity;
@@ -274,19 +286,74 @@ public class IDCardInteraction : MonoBehaviour
         return false;
     }
 
+    // ── Public API (called by ObjectPickup) ───────────────────────────
+
     /// <summary>
     /// Called by ObjectPickup when the player presses E while looking at this ID card.
-    /// Enters focus mode to zoom the camera to the card.
+    /// Routes through the server lock in multiplayer; activates directly in single-player.
     /// </summary>
     public void Activate()
     {
         if (_isActive) return;
 
+        if (!IsSpawned)
+        {
+            DoActivate();
+            return;
+        }
+
+        if (_currentUserId.Value != NoUser) return; // Card already being viewed
+
+        RequestActivationServerRpc(NetworkManager.Singleton.LocalClientId);
+    }
+
+    /// <summary>
+    /// Cleans up and returns to normal state. Also releases the server-side lock.
+    /// </summary>
+    public void Deactivate()
+    {
+        if (!_isActive) return;
+
+        DoDeactivate();
+
+        if (IsSpawned)
+            ReleaseActivationServerRpc();
+    }
+
+    // ── Networked Lock RPCs ───────────────────────────────────────────
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivationServerRpc(ulong requestingClientId)
+    {
+        if (_currentUserId.Value != NoUser) return;
+
+        _currentUserId.Value = requestingClientId;
+        ActivateClientRpc(requestingClientId);
+    }
+
+    [ClientRpc]
+    private void ActivateClientRpc(ulong targetClientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != targetClientId) return;
+        DoActivate();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ReleaseActivationServerRpc()
+    {
+        _currentUserId.Value = NoUser;
+    }
+
+    // ── Internal Activate / Deactivate ───────────────────────────────
+
+    private void DoActivate()
+    {
         PlayerComponents pc = PlayerComponents.Local;
         FocusStateManager focus = pc != null ? pc.FocusState : null;
         if (focus == null)
         {
-            Debug.LogError("[IDCardInteraction] Cannot activate: PlayerComponents or FocusStateManager not found!");
+            Debug.LogError("[IDCardInteraction] Cannot activate: FocusStateManager not found!");
+            if (IsSpawned) ReleaseActivationServerRpc();
             return;
         }
 
@@ -300,45 +367,33 @@ public class IDCardInteraction : MonoBehaviour
         _hasBeenScanned = false;
         _isHovering = false;
 
-        // Cache the camera before focus mode changes it
         _cachedCamera = pc.PlayerCamera;
 
         Debug.Log("[IDCardInteraction] Activating — entering focus mode on ID card.");
 
-        // Enter focus mode (disables FPS controls, transitions camera)
         focus.EnterFocus(_focusCameraTarget, OnFocusExited);
     }
 
-    /// <summary>
-    /// Called when the player exits focus mode (presses Escape or auto-exit after scan).
-    /// </summary>
-    private void OnFocusExited()
+    private void DoDeactivate()
     {
-        Deactivate();
-    }
-
-    /// <summary>
-    /// Cleans up and returns to normal state.
-    /// </summary>
-    public void Deactivate()
-    {
-        if (!_isActive) return;
-
         _isActive = false;
         _isHovering = false;
         SetHighlightVisible(false);
+        _cachedCamera = null;
 
         Debug.Log("[IDCardInteraction] Deactivating — exiting ID card focus.");
 
-        // Exit focus if still focused
         PlayerComponents pc = PlayerComponents.Local;
         FocusStateManager focus = pc != null ? pc.FocusState : null;
         if (focus != null && focus.IsFocused)
-        {
             focus.ExitFocus();
-        }
+    }
 
-        _cachedCamera = null;
+    // ── Focus Callback ────────────────────────────────────────────────
+
+    private void OnFocusExited()
+    {
+        Deactivate();
     }
 
     /// <summary>

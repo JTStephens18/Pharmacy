@@ -1,4 +1,5 @@
 using System;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,9 +7,11 @@ using UnityEngine.UI;
 /// Interactable computer screen that uses a World Space Canvas.
 /// The player presses E to focus on the monitor; the camera lerps to a target
 /// position and the canvas becomes clickable. Press Escape to exit.
-/// Follows the same pattern as PillCountingStation.
+///
+/// Multiplayer: server-authoritative exclusive-access lock via NetworkVariable.
+/// Only one player can use the screen at a time.
 /// </summary>
-public class ComputerScreen : MonoBehaviour
+public class ComputerScreen : NetworkBehaviour
 {
     [Header("Focus Camera Position")]
     [Tooltip("Empty Transform positioned where the camera should sit when focused on the screen.")]
@@ -32,26 +35,37 @@ public class ComputerScreen : MonoBehaviour
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip activateSound;
 
+    // ── Networked Lock ────────────────────────────────────────────────
+    // ulong.MaxValue = no current user. Server-authoritative.
+    private const ulong NoUser = ulong.MaxValue;
+
+    private readonly NetworkVariable<ulong> _currentUserId = new NetworkVariable<ulong>(
+        ulong.MaxValue,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    // ── Local State ───────────────────────────────────────────────────
     private bool _isActive;
     private GraphicRaycaster _raycaster;
     private bool _suppressDeactivation;
     private Action _onTemporaryExitComplete;
 
-    public bool IsActive => _isActive;
+    public bool IsActive  => _isActive;
+
+    /// <summary>True when another player is currently using this screen.</summary>
+    public bool IsInUse   => IsSpawned && _currentUserId.Value != NoUser;
+
+    // ─────────────────────────────────────────────────────────────────
 
     void Awake()
     {
-        // Cache the raycaster — this is the gate for UI interaction
         if (screenCanvas != null)
         {
             _raycaster = screenCanvas.GetComponent<GraphicRaycaster>();
             if (_raycaster == null)
-            {
                 _raycaster = screenCanvas.gameObject.AddComponent<GraphicRaycaster>();
-            }
         }
 
-        // Auto-find the controller if not manually assigned
         if (controller == null && interactiveUI != null)
         {
             controller = interactiveUI.GetComponent<ComputerScreenController>();
@@ -65,29 +79,84 @@ public class ComputerScreen : MonoBehaviour
             Debug.LogWarning("[ComputerScreen] No ComputerScreenController found! " +
                 "Add it to the InteractiveUI GameObject or assign it manually.");
 
-        // Start with interaction disabled but screen visually "on"
         SetInteractive(false);
     }
 
+    // ── Public API (called by ObjectPickup) ───────────────────────────
+
     /// <summary>
     /// Called by ObjectPickup when the player presses E while looking at this monitor.
+    /// Routes through the server lock in multiplayer; activates directly in single-player.
     /// </summary>
     public void Activate()
     {
         if (_isActive) return;
 
-        // --- Validate prerequisites ---
+        if (!IsSpawned)
+        {
+            // Non-networked fallback (editor / single-player without NGO)
+            DoActivate();
+            return;
+        }
+
+        if (_currentUserId.Value != NoUser) return; // Screen already in use
+
+        RequestActivationServerRpc(NetworkManager.Singleton.LocalClientId);
+    }
+
+    /// <summary>
+    /// Cleans up and returns to normal state. Also releases the server-side lock.
+    /// </summary>
+    public void Deactivate()
+    {
+        if (!_isActive) return;
+
+        DoDeactivate();
+
+        if (IsSpawned)
+            ReleaseActivationServerRpc();
+    }
+
+    // ── Networked Lock RPCs ───────────────────────────────────────────
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivationServerRpc(ulong requestingClientId)
+    {
+        if (_currentUserId.Value != NoUser) return; // Race condition: someone else just took it
+
+        _currentUserId.Value = requestingClientId;
+        ActivateClientRpc(requestingClientId);
+    }
+
+    [ClientRpc]
+    private void ActivateClientRpc(ulong targetClientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != targetClientId) return;
+        DoActivate();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ReleaseActivationServerRpc()
+    {
+        _currentUserId.Value = NoUser;
+    }
+
+    // ── Internal Activate / Deactivate ───────────────────────────────
+
+    private void DoActivate()
+    {
         FocusStateManager focus = GetFocusManager();
         if (focus == null)
         {
             Debug.LogError("[ComputerScreen] Cannot activate: PlayerComponents or FocusStateManager not found!");
+            if (IsSpawned) ReleaseActivationServerRpc();
             return;
         }
 
         if (focusCameraTarget == null)
         {
-            Debug.LogError("[ComputerScreen] Cannot activate: Focus Camera Target is not assigned! " +
-                "Create an empty child GameObject in front of the monitor and assign it.");
+            Debug.LogError("[ComputerScreen] Cannot activate: Focus Camera Target is not assigned!");
+            if (IsSpawned) ReleaseActivationServerRpc();
             return;
         }
 
@@ -95,33 +164,38 @@ public class ComputerScreen : MonoBehaviour
 
         Debug.Log("[ComputerScreen] Activating — entering focus mode.");
 
-        // Ensure the World Space Canvas has an Event Camera — this MUST happen
-        // here (not Awake) because the camera may not exist during Awake.
         EnsureEventCamera();
 
-        // Check for EventSystem (required for any UI interaction)
         if (UnityEngine.EventSystems.EventSystem.current == null)
-            Debug.LogError("[ComputerScreen] No EventSystem in scene! UI buttons won't work. " +
-                "Add one via: GameObject → UI → Event System.");
+            Debug.LogError("[ComputerScreen] No EventSystem in scene! UI buttons won't work.");
 
-        // Enter focus mode (disables FPS controls, transitions camera)
         focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
-        // Enable UI interaction and show main view
         SetInteractive(true);
         if (controller != null)
             controller.ResetToMain();
 
-        // Play activation sound
         if (audioSource != null && activateSound != null)
-        {
             audioSource.PlayOneShot(activateSound);
-        }
     }
 
-    /// <summary>
-    /// Called when the player exits focus mode (presses Escape).
-    /// </summary>
+    private void DoDeactivate()
+    {
+        _isActive = false;
+
+        Debug.Log("[ComputerScreen] Deactivating — exiting focus mode.");
+
+        SetInteractive(false);
+        if (controller != null)
+            controller.HideAll();
+
+        FocusStateManager focus = GetFocusManager();
+        if (focus != null && focus.IsFocused)
+            focus.ExitFocus();
+    }
+
+    // ── Focus Callbacks ───────────────────────────────────────────────
+
     private void OnFocusExited()
     {
         if (_suppressDeactivation)
@@ -136,29 +210,7 @@ public class ComputerScreen : MonoBehaviour
         Deactivate();
     }
 
-    /// <summary>
-    /// Cleans up and returns to normal state.
-    /// </summary>
-    public void Deactivate()
-    {
-        if (!_isActive) return;
-
-        _isActive = false;
-
-        Debug.Log("[ComputerScreen] Deactivating — exiting focus mode.");
-
-        // Disable UI interaction and hide all views
-        SetInteractive(false);
-        if (controller != null)
-            controller.HideAll();
-
-        // Make sure focus is exited (in case Deactivate was called directly)
-        FocusStateManager focus = GetFocusManager();
-        if (focus != null && focus.IsFocused)
-        {
-            focus.ExitFocus();
-        }
-    }
+    // ── Dialogue Integration ──────────────────────────────────────────
 
     /// <summary>
     /// Temporarily exits computer focus to allow dialogue, without fully deactivating.
@@ -171,7 +223,6 @@ public class ComputerScreen : MonoBehaviour
         _suppressDeactivation = true;
         _onTemporaryExitComplete = onComplete;
 
-        // Stop UI from receiving clicks during the transition
         if (_raycaster != null)
             _raycaster.enabled = false;
 
@@ -194,7 +245,6 @@ public class ComputerScreen : MonoBehaviour
         EnsureEventCamera();
         focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
-        // Re-enable the raycaster once the focus transition completes
         focus.OnFocusChanged += OnReactivateFocusChanged;
     }
 
@@ -202,7 +252,6 @@ public class ComputerScreen : MonoBehaviour
     {
         if (!entered) return;
 
-        // Unsubscribe — this is a one-shot listener
         FocusStateManager focus = GetFocusManager();
         if (focus != null)
             focus.OnFocusChanged -= OnReactivateFocusChanged;
@@ -211,24 +260,17 @@ public class ComputerScreen : MonoBehaviour
             _raycaster.enabled = true;
     }
 
-    /// <summary>
-    /// Gets the FocusStateManager from the local player.
-    /// </summary>
+    // ── Helpers ───────────────────────────────────────────────────────
+
     private FocusStateManager GetFocusManager()
     {
         PlayerComponents pc = PlayerComponents.Local;
         return pc != null ? pc.FocusState : null;
     }
 
-    /// <summary>
-    /// Ensures the World Space Canvas has a valid Event Camera.
-    /// Called at activation time because the camera may not exist during Awake.
-    /// </summary>
     private void EnsureEventCamera()
     {
         if (screenCanvas == null || screenCanvas.renderMode != RenderMode.WorldSpace) return;
-
-        // Already assigned and valid?
         if (screenCanvas.worldCamera != null) return;
 
         PlayerComponents pc = PlayerComponents.Local;
@@ -241,21 +283,15 @@ public class ComputerScreen : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[ComputerScreen] Cannot find player camera for World Space Canvas! " +
-                "Button clicks will not work.");
+            Debug.LogError("[ComputerScreen] Cannot find player camera for World Space Canvas!");
         }
     }
 
-    /// <summary>
-    /// Toggles between idle (powered-on but non-interactive) and active (interactive) states.
-    /// </summary>
     private void SetInteractive(bool interactive)
     {
-        // Toggle the GraphicRaycaster — this controls whether clicks reach UI elements
         if (_raycaster != null)
             _raycaster.enabled = interactive;
 
-        // Show/hide the idle screen vs interactive UI
         if (idleScreen != null)
             idleScreen.SetActive(!interactive);
 

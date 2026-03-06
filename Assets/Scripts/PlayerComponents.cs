@@ -33,6 +33,12 @@ public class PlayerComponents : MonoBehaviour
     public FocusStateManager FocusState { get; private set; }
     public Camera PlayerCamera { get; private set; }
 
+    /// <summary>Per-player dialogue overlay manager. Lives on the Player prefab canvas.</summary>
+    public DialogueManager Dialogue { get; private set; }
+
+    /// <summary>Per-player dialogue history log. Lives alongside DialogueManager.</summary>
+    public DialogueHistory DialogueHistory { get; private set; }
+
     void Awake()
     {
         // Auto-find components in the player hierarchy
@@ -42,6 +48,8 @@ public class PlayerComponents : MonoBehaviour
         PlacementManager = GetComponentInChildren<ItemPlacementManager>();
         FocusState = GetComponent<FocusStateManager>();
         PlayerCamera = GetComponentInChildren<Camera>();
+        Dialogue = GetComponentInChildren<DialogueManager>();
+        DialogueHistory = GetComponentInChildren<DialogueHistory>();
 
         if (Movement == null) Debug.LogWarning("[PlayerComponents] PlayerMovement not found on player hierarchy.");
         if (Look == null) Debug.LogWarning("[PlayerComponents] MouseLook not found on player hierarchy.");

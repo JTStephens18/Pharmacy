@@ -1067,10 +1067,14 @@ public class NPCInteractionController : NetworkBehaviour
 
     /// <summary>
     /// Returns the current state of the NPC.
+    /// On clients, reads from the synced NetworkVariable so NPCDialogueTrigger
+    /// can check state correctly without the server-only state machine running locally.
     /// </summary>
     public string GetCurrentState()
     {
-        return _currentState.ToString();
+        if (IsSpawned && !IsServer)
+            return ((NPCState)_networkState.Value).ToString();
+        return _currentStateInternal.ToString();
     }
 
     // ── Network helpers ──────────────────────────────────────────────

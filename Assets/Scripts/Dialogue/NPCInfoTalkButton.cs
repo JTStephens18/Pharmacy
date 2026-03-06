@@ -27,6 +27,7 @@ public class NPCInfoTalkButton : MonoBehaviour
     private bool _isOrchestrating;
     private float _scanTimer;
     private const float SCAN_INTERVAL = 0.5f;
+    private DialogueManager _subscribedDm;
 
     void Awake()
     {
@@ -43,15 +44,13 @@ public class NPCInfoTalkButton : MonoBehaviour
 
         if (_computerScreen == null)
             Debug.LogError("[NPCInfoTalkButton] Could not find ComputerScreen in hierarchy or scene.");
-
-        if (DialogueManager.Instance != null)
-            DialogueManager.Instance.OnDialogueEnded += OnDialogueEnded;
     }
 
     void OnDestroy()
     {
-        if (DialogueManager.Instance != null)
-            DialogueManager.Instance.OnDialogueEnded -= OnDialogueEnded;
+        // Unsubscribe from whichever DialogueManager we subscribed to during orchestration
+        if (_subscribedDm != null)
+            _subscribedDm.OnDialogueEnded -= OnDialogueEnded;
     }
 
     void OnEnable()
@@ -121,8 +120,15 @@ public class NPCInfoTalkButton : MonoBehaviour
         NPCDialogueTrigger trigger = FindMatchingTrigger();
         if (trigger == null) return;
 
+        DialogueManager dm = PlayerComponents.Local?.Dialogue;
+        if (dm == null) return;
+
         _isOrchestrating = true;
         _button.interactable = false;
+
+        // Subscribe to end event before starting the chain so we don't miss it
+        _subscribedDm = dm;
+        dm.OnDialogueEnded += OnDialogueEnded;
 
         Debug.Log($"[NPCInfoTalkButton] Starting dialogue chain with {trigger.gameObject.name}");
 
@@ -134,13 +140,20 @@ public class NPCInfoTalkButton : MonoBehaviour
     {
         // Phase 2: focus has fully exited — start info dialogue
         // Suppress EndDialogue's control reset so re-entering computer focus is seamless
-        DialogueManager.Instance.SetSuppressEndReset(true);
+        PlayerComponents.Local?.Dialogue?.SetSuppressEndReset(true);
         trigger.StartInfoDialogue(dialogueKey);
     }
 
     private void OnDialogueEnded()
     {
         if (!_isOrchestrating) return;
+
+        // Unsubscribe immediately so we don't get called again
+        if (_subscribedDm != null)
+        {
+            _subscribedDm.OnDialogueEnded -= OnDialogueEnded;
+            _subscribedDm = null;
+        }
 
         // Phase 3: dialogue finished — re-enter computer focus
         Debug.Log("[NPCInfoTalkButton] Dialogue ended, reactivating computer focus.");

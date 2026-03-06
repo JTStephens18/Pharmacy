@@ -1,10 +1,16 @@
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
 /// The sorting station that the player interacts with to start the pill counting mini-game.
 /// Manages the full mini-game lifecycle: activation, pill spawning, completion, and cleanup.
+///
+/// Multiplayer: server-authoritative exclusive-access lock via NetworkVariable.
+/// Only one player can use the station at a time.
+/// Pills are spawned locally on the using client — they are not networked objects.
+/// PillScraper, PillCountingChute, and PillCountUI are enabled only on the using client.
 /// </summary>
-public class PillCountingStation : MonoBehaviour
+public class PillCountingStation : NetworkBehaviour
 {
     [Header("Mini-Game Settings")]
     [SerializeField] private int targetPillCount = 30;
@@ -23,9 +29,21 @@ public class PillCountingStation : MonoBehaviour
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip activateSound;
 
+    // ── Networked Lock ────────────────────────────────────────────────
+    private const ulong NoUser = ulong.MaxValue;
+
+    private readonly NetworkVariable<ulong> _currentUserId = new NetworkVariable<ulong>(
+        ulong.MaxValue,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    // ── Local State ───────────────────────────────────────────────────
     private bool _isActive;
 
-    public bool IsActive => _isActive;
+    public bool IsActive  => _isActive;
+
+    /// <summary>True when another player is currently using this station.</summary>
+    public bool IsInUse   => IsSpawned && _currentUserId.Value != NoUser;
 
     void Awake()
     {
@@ -39,26 +57,81 @@ public class PillCountingStation : MonoBehaviour
         SetMiniGameActive(false);
     }
 
+    // ── Public API (called by ObjectPickup) ───────────────────────────
+
     /// <summary>
     /// Called by ObjectPickup when the player presses E while looking at this station.
+    /// Routes through the server lock in multiplayer; activates directly in single-player.
     /// </summary>
     public void Activate()
     {
         if (_isActive) return;
 
-        // --- Validate prerequisites BEFORE doing anything ---
+        if (!IsSpawned)
+        {
+            DoActivate();
+            return;
+        }
+
+        if (_currentUserId.Value != NoUser) return; // Station already in use
+
+        RequestActivationServerRpc(NetworkManager.Singleton.LocalClientId);
+    }
+
+    /// <summary>
+    /// Cleans up the mini-game and restores normal state. Also releases the server-side lock.
+    /// </summary>
+    public void Deactivate()
+    {
+        if (!_isActive) return;
+
+        DoDeactivate();
+
+        if (IsSpawned)
+            ReleaseActivationServerRpc();
+    }
+
+    // ── Networked Lock RPCs ───────────────────────────────────────────
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivationServerRpc(ulong requestingClientId)
+    {
+        if (_currentUserId.Value != NoUser) return;
+
+        _currentUserId.Value = requestingClientId;
+        ActivateClientRpc(requestingClientId);
+    }
+
+    [ClientRpc]
+    private void ActivateClientRpc(ulong targetClientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != targetClientId) return;
+        DoActivate();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ReleaseActivationServerRpc()
+    {
+        _currentUserId.Value = NoUser;
+    }
+
+    // ── Internal Activate / Deactivate ───────────────────────────────
+
+    private void DoActivate()
+    {
         PlayerComponents pc = PlayerComponents.Local;
         FocusStateManager focus = pc != null ? pc.FocusState : null;
         if (focus == null)
         {
-            Debug.LogError("[PillCountingStation] Cannot activate: PlayerComponents or FocusStateManager not found!");
+            Debug.LogError("[PillCountingStation] Cannot activate: FocusStateManager not found!");
+            if (IsSpawned) ReleaseActivationServerRpc();
             return;
         }
 
         if (focusCameraTarget == null)
         {
-            Debug.LogError("[PillCountingStation] Cannot activate: Focus Camera Target is not assigned! " +
-                "Create an empty GameObject positioned over the tray and assign it to the 'Focus Camera Target' field.");
+            Debug.LogError("[PillCountingStation] Cannot activate: Focus Camera Target is not assigned!");
+            if (IsSpawned) ReleaseActivationServerRpc();
             return;
         }
 
@@ -66,108 +139,76 @@ public class PillCountingStation : MonoBehaviour
 
         Debug.Log($"[PillCountingStation] Activating with target: {targetPillCount} pills.");
 
-        // Enter focus mode FIRST (disables FPS controls, transitions camera)
         focus.EnterFocus(focusCameraTarget, OnFocusExited);
 
-        // Enable mini-game components
+        // Enable mini-game components (local to this client only)
         SetMiniGameActive(true);
 
-        // Initialize the chute
         if (chute != null)
         {
             chute.Initialize(targetPillCount);
             chute.OnTargetReached += OnTargetReached;
         }
 
-        // Bind UI to chute
         if (countUI != null)
-        {
             countUI.Bind(chute);
-        }
 
-        // Set scraper tray center
         if (scraper != null)
-        {
             scraper.SetTrayCenter(transform.position);
-        }
 
-        // Spawn pills
+        // Pills are spawned locally — not networked objects
         if (spawner != null)
-        {
             spawner.SpawnPills(targetPillCount);
-        }
 
-        // Play activation sound
         if (audioSource != null && activateSound != null)
-        {
             audioSource.PlayOneShot(activateSound);
-        }
     }
 
-    /// <summary>
-    /// Called when the target pill count is reached.
-    /// Auto-exits after a short delay so the player can see the completion state.
-    /// </summary>
-    private void OnTargetReached()
+    private void DoDeactivate()
     {
-        Debug.Log("[PillCountingStation] Mini-game complete!");
-        Invoke(nameof(Deactivate), 1.5f);
-    }
-
-    /// <summary>
-    /// Called when the player exits focus mode (presses Escape).
-    /// </summary>
-    private void OnFocusExited()
-    {
-        Deactivate();
-    }
-
-    /// <summary>
-    /// Cleans up the mini-game and restores normal state.
-    /// </summary>
-    public void Deactivate()
-    {
-        if (!_isActive) return;
-
         _isActive = false;
 
         Debug.Log("[PillCountingStation] Deactivating.");
 
-        // Unsubscribe
         if (chute != null)
         {
             chute.OnTargetReached -= OnTargetReached;
             chute.ResetChute();
         }
 
-        // Clean up pills
         if (spawner != null)
-        {
             spawner.ClearPills();
-        }
 
-        // Reset UI
         if (countUI != null)
-        {
             countUI.ResetUI();
-        }
 
-        // Disable mini-game components
         SetMiniGameActive(false);
 
-        // Make sure focus is exited (in case Deactivate was called directly)
         PlayerComponents pc = PlayerComponents.Local;
         FocusStateManager focus = pc != null ? pc.FocusState : null;
         if (focus != null && focus.IsFocused)
-        {
             focus.ExitFocus();
-        }
     }
+
+    // ── Focus Callbacks ───────────────────────────────────────────────
+
+    private void OnTargetReached()
+    {
+        Debug.Log("[PillCountingStation] Mini-game complete!");
+        Invoke(nameof(Deactivate), 1.5f);
+    }
+
+    private void OnFocusExited()
+    {
+        Deactivate();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
 
     private void SetMiniGameActive(bool active)
     {
         if (scraper != null) scraper.enabled = active;
-        if (chute != null) chute.enabled = active;
+        if (chute   != null) chute.enabled   = active;
         if (countUI != null) countUI.gameObject.SetActive(active);
     }
 }

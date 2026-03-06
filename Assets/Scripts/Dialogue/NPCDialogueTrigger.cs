@@ -58,11 +58,13 @@ public class NPCDialogueTrigger : MonoBehaviour
     // Runtime lookup for info dialogues
     private Dictionary<string, TextAsset> _infoDialogueLookup;
 
-    // Returns the nearest registered player transform each time it is accessed.
-    // Avoids the Start() timing problem where PlayerComponents.Local is null
-    // because the network player hasn't spawned yet.
+    // Tracks which DialogueManager we subscribed to so we can unsubscribe cleanly.
+    private DialogueManager _activeDialogueManager;
+
+    // Use the local player's transform for range/LOS checks.
+    // Each client checks their own player — avoids cross-client dialogue triggers.
     private Transform PlayerTransform =>
-        PlayerRegistry.GetNearest(transform.position)?.Movement?.transform;
+        PlayerComponents.Local?.Movement?.transform;
 
     void Awake()
     {
@@ -80,21 +82,11 @@ public class NPCDialogueTrigger : MonoBehaviour
         }
     }
 
-    void Start()
-    {
-        // Subscribe to dialogue end events
-        if (DialogueManager.Instance != null)
-        {
-            DialogueManager.Instance.OnDialogueEnded += OnDialogueEnded;
-        }
-    }
-
     void OnDestroy()
     {
-        if (DialogueManager.Instance != null)
-        {
-            DialogueManager.Instance.OnDialogueEnded -= OnDialogueEnded;
-        }
+        // Unsubscribe from whichever DialogueManager we last used
+        if (_activeDialogueManager != null)
+            _activeDialogueManager.OnDialogueEnded -= OnDialogueEnded;
     }
 
     void Update()
@@ -151,13 +143,21 @@ public class NPCDialogueTrigger : MonoBehaviour
             return;
         }
 
+        DialogueManager dm = PlayerComponents.Local?.Dialogue;
+        if (dm == null)
+        {
+            Debug.LogWarning("[NPCDialogueTrigger] No DialogueManager found on local player.");
+            return;
+        }
+
         _loadedData = DialogueLoader.Load(dialogueFile, out _loadedLookup);
         if (_loadedData == null || _loadedLookup == null) return;
 
         string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
 
         _dialogueInProgress = true;
-        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
+        SubscribeToDialogueEnd(dm);
+        dm.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
 
         DebugLog($"[NPCDialogueTrigger] Started info dialogue '{_loadedData.dialogueId}' (key: '{key}')");
     }
@@ -190,13 +190,15 @@ public class NPCDialogueTrigger : MonoBehaviour
 
     private bool CanTriggerDialogue()
     {
-        Transform pt = PlayerTransform;
+        PlayerComponents pc = PlayerComponents.Local;
+        if (pc == null) return false;
+
+        Transform pt = pc.Movement?.transform;
         if (_npcController == null || pt == null) return false;
         if (dialogueFiles == null || dialogueFiles.Length == 0) return false;
 
-        // Don't trigger if player is in a focused mode (computer, pill station, etc.)
-        PlayerComponents pc = PlayerComponents.Local;
-        FocusStateManager focus = pc != null ? pc.FocusState : null;
+        // Don't trigger if local player is in a focused mode (computer, pill station, etc.)
+        FocusStateManager focus = pc.FocusState;
         if (focus != null && (focus.IsFocused || focus.IsTransitioning))
             return false;
 
@@ -213,8 +215,9 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (requireLineOfSight && !HasLineOfSight())
             return false;
 
-        // Check that DialogueManager exists and isn't busy
-        if (DialogueManager.Instance == null || DialogueManager.Instance.IsActive)
+        // Check that the local player's DialogueManager exists and isn't busy
+        DialogueManager dm = pc.Dialogue;
+        if (dm == null || dm.IsActive)
             return false;
 
         return true;
@@ -266,13 +269,21 @@ public class NPCDialogueTrigger : MonoBehaviour
             return;
         }
 
+        DialogueManager dm = PlayerComponents.Local?.Dialogue;
+        if (dm == null)
+        {
+            Debug.LogWarning("[NPCDialogueTrigger] No DialogueManager found on local player.");
+            return;
+        }
+
         _loadedData = DialogueLoader.Load(jsonAsset, out _loadedLookup);
         if (_loadedData == null || _loadedLookup == null) return;
 
         string speakerName = _npcController.NpcIdentity != null ? _npcController.NpcIdentity.fullName : null;
 
         _dialogueInProgress = true;
-        DialogueManager.Instance.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
+        SubscribeToDialogueEnd(dm);
+        dm.StartDialogue(_loadedData, _loadedLookup, transform, speakerName);
 
         DebugLog($"[NPCDialogueTrigger] Started dialogue '{_loadedData.dialogueId}' (file index {index})");
     }
@@ -282,7 +293,28 @@ public class NPCDialogueTrigger : MonoBehaviour
         if (_dialogueInProgress)
         {
             _dialogueInProgress = false;
+            UnsubscribeFromDialogueEnd();
             DebugLog("[NPCDialogueTrigger] Dialogue ended.");
+        }
+    }
+
+    private void SubscribeToDialogueEnd(DialogueManager dm)
+    {
+        // Unsubscribe from any previous DM first to avoid double-callbacks
+        if (_activeDialogueManager != null)
+            _activeDialogueManager.OnDialogueEnded -= OnDialogueEnded;
+
+        _activeDialogueManager = dm;
+        if (dm != null)
+            dm.OnDialogueEnded += OnDialogueEnded;
+    }
+
+    private void UnsubscribeFromDialogueEnd()
+    {
+        if (_activeDialogueManager != null)
+        {
+            _activeDialogueManager.OnDialogueEnded -= OnDialogueEnded;
+            _activeDialogueManager = null;
         }
     }
 

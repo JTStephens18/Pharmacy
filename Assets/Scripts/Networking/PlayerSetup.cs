@@ -34,6 +34,9 @@ public class PlayerSetup : NetworkBehaviour
 
             AudioListener listener = pc.PlayerCamera.GetComponent<AudioListener>();
             if (listener != null) listener.enabled = true;
+
+            if (pc.Dialogue != null) pc.Dialogue.enabled = true;
+            if (pc.DialogueHistory != null) pc.DialogueHistory.enabled = true;
         }
         else
         {
@@ -47,6 +50,9 @@ public class PlayerSetup : NetworkBehaviour
 
             AudioListener listener = pc.PlayerCamera.GetComponent<AudioListener>();
             if (listener != null) listener.enabled = false;
+
+            if (pc.Dialogue != null) pc.Dialogue.enabled = false;
+            if (pc.DialogueHistory != null) pc.DialogueHistory.enabled = false;
         }
     }
 
