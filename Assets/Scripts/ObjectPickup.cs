@@ -96,6 +96,7 @@ public class ObjectPickup : NetworkBehaviour
                 // Slot may be null for networked items (found server-side during deletion)
                 else if (_currentCounterItem != null)
                 {
+                    Debug.Log($"[ObjectPickup] Bagging counter item: {_currentCounterItem.gameObject.name}");
                     DeleteCounterItem();
                 }
                 // Check for cash register (checkout)
@@ -110,6 +111,21 @@ public class ObjectPickup : NetworkBehaviour
                 }
                 else
                 {
+                    // Debug: log what the raycast is hitting when nothing is detected
+                    Ray debugRay = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+                    if (Physics.Raycast(debugRay, out RaycastHit debugHit, pickupRange, pickupLayerMask, QueryTriggerInteraction.Ignore))
+                    {
+                        InteractableItem debugItem = debugHit.collider.GetComponent<InteractableItem>()
+                                                  ?? debugHit.collider.GetComponentInParent<InteractableItem>();
+                        if (debugItem != null)
+                        {
+                            NetworkObject debugNetObj = debugItem.GetComponent<NetworkObject>();
+                            Debug.Log($"[ObjectPickup] E pressed but no counter item detected. Hit InteractableItem '{debugItem.gameObject.name}' " +
+                                      $"(NetworkObject={debugNetObj != null}, IsDelivered={debugItem.IsDelivered}, " +
+                                      $"active={debugItem.gameObject.activeSelf}, collider={debugHit.collider.enabled}, " +
+                                      $"pos={debugItem.transform.position})");
+                        }
+                    }
                     TryPickup();
                 }
             }
@@ -506,6 +522,9 @@ public class ObjectPickup : NetworkBehaviour
         _currentDeliveryStation = newStation;
     }
 
+    // Debug throttle for DetectCounterItem logging
+    private float _counterItemDebugTimer;
+
     private void DetectCounterItem()
     {
         // Only detect counter items when not holding anything
@@ -518,6 +537,14 @@ public class ObjectPickup : NetworkBehaviour
         Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
         InteractableItem newItem = null;
         CounterSlot newSlot = null;
+
+        bool shouldLog = false;
+        _counterItemDebugTimer += Time.deltaTime;
+        if (_counterItemDebugTimer >= 1f)
+        {
+            _counterItemDebugTimer = 0f;
+            shouldLog = true;
+        }
 
         // Ignore triggers (CounterSlot itself) so we can raycast through it to hit specific items
         if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask, QueryTriggerInteraction.Ignore))
@@ -538,20 +565,27 @@ public class ObjectPickup : NetworkBehaviour
                 }
                 else
                 {
-                    // Networked path: item is world-space; use spatial detection via BoxCollider bounds.
-                    // Works without any editor registry setup — ClosestPoint returns the input point
-                    // unchanged when the point is already inside the collider.
+                    // Networked path: item is world-space (NGO forbids parenting to non-NetworkObjects).
+                    // Accept any NetworkObject InteractableItem — the server validates via
+                    // GetSlotContaining in DeleteCounterItemServerRpc before despawning.
                     NetworkObject netObj = item.GetComponent<NetworkObject>();
                     if (netObj != null)
                     {
-                        CounterSlot spatialSlot = CounterSlot.FindContainingSlot(item.transform.position);
-                        if (spatialSlot != null)
-                        {
-                            newItem = item;
-                            newSlot = spatialSlot;
-                        }
+                        newItem = item;
+                        newSlot = CounterSlot.FindContainingSlot(item.transform.position);
+
+                        if (shouldLog)
+                            Debug.Log($"[DetectCounterItem] Found networked counter item: '{item.gameObject.name}' netId={netObj.NetworkObjectId} pos={item.transform.position} rb.isKinematic={item.GetComponent<Rigidbody>()?.isKinematic}");
+                    }
+                    else if (shouldLog)
+                    {
+                        Debug.Log($"[DetectCounterItem] Hit InteractableItem '{item.gameObject.name}' but no NetworkObject — skipped");
                     }
                 }
+            }
+            else if (shouldLog)
+            {
+                Debug.Log($"[DetectCounterItem] Raycast hit '{hit.collider.gameObject.name}' — no InteractableItem component");
             }
         }
 
@@ -579,6 +613,7 @@ public class ObjectPickup : NetworkBehaviour
         NetworkObject netObj = _currentCounterItem.GetComponent<NetworkObject>();
         if (netObj != null)
         {
+            Debug.Log($"[ObjectPickup] Client sending DeleteCounterItemServerRpc for netId={netObj.NetworkObjectId}");
             // Networked path: server finds the slot, notifies clients, and despawns the item
             DeleteCounterItemServerRpc(netObj.NetworkObjectId);
         }

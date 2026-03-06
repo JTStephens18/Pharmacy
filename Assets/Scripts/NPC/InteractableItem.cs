@@ -44,6 +44,17 @@ public class InteractableItem : MonoBehaviour, IInteractable
         _collider = GetComponent<Collider>();
         _renderers = GetComponentsInChildren<Renderer>();
 
+        // For NetworkObjects, force Rigidbody kinematic so physics doesn't fight
+        // NetworkTransform on non-host clients. Without this, gravity pulls the
+        // physics collider away from the visual position (set by NetworkTransform),
+        // making the item unhittable by raycasts on clients.
+        // Items only need non-kinematic when thrown by the player (ObjectPickup handles that).
+        if (GetComponent<NetworkObject>() != null && _rigidbody != null)
+        {
+            _rigidbody.isKinematic = true;
+            _rigidbody.useGravity = false;
+        }
+
         // Auto-find GrabTarget if not assigned
         if (grabTarget == null)
         {
