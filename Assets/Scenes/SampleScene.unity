@@ -1017,8 +1017,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 418187896}
-  - component: {fileID: 418187895}
   - component: {fileID: 418187894}
+  - component: {fileID: 418187895}
   m_Layer: 0
   m_Name: DisconnectHandler
   m_TagString: Untagged

@@ -924,6 +924,21 @@ Server-only. Subscribes to `NetworkManager.OnClientDisconnectCallback` in `OnNet
 
 Each lockable script exposes `public void ForceReleaseLock(ulong clientId)` — server-only, no RPC needed.
 
+### Object Pickup — Networking Status
+
+All `NetworkObject` item mutations are server-authoritative:
+
+| Action | RPC Flow |
+|---|---|
+| Pickup | `RequestPickupServerRpc` → `ConfirmPickupClientRpc` (all clients disable physics) → picker does `DoNetworkPickup` |
+| Throw / Drop / Gentle Drop | `ReleaseHeldNetworkObject` → `ReleaseNetworkObjectServerRpc` → `RestoreObjectPhysicsClientRpc` (all clients re-enable physics) |
+| Counter item bagging | `DeleteCounterItemServerRpc` → `CounterSlotNetwork.RecordRemoval` → `Despawn` |
+| Place from box → shelf | `PlaceItemOnShelfServerRpc` (in `ItemPlacementManager`) |
+| Place held item → shelf | `PlaceHeldItemOnShelfServerRpc` → `ShelfSlot.PlaceItem` + `ShelfSlotNetwork.RecordPlacement` + `RestoreObjectPhysicsClientRpc` |
+
+**Physics sync**: `ConfirmPickupClientRpc` disables collider + sets kinematic on **all clients** (not just the picker), preventing phantom collisions. `RestoreObjectPhysicsClientRpc` re-enables on all clients when released.
+
+Local (non-`NetworkObject`) fallback paths are retained for editor/single-player testing.
+
 ### What Still Needs Networking (pending tiers)
-1. **Object Pickup** — pickup, throw, drop, bagging all need full ServerRpc/ClientRpc flow. Currently local-only with `ClientNetworkTransform` sync.
-2. **Lobby** — Replace `QuickConnect.cs` with proper lobby UI.
+1. **Lobby** — Replace `QuickConnect.cs` with proper lobby UI.

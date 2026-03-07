@@ -248,19 +248,29 @@ public class ObjectPickup : NetworkBehaviour
 
     /// <summary>
     /// Sent to all clients after server confirms pickup.
-    /// Only the picker sets up local hold state; all other clients receive
-    /// position updates automatically via ClientNetworkTransform.
+    /// All clients disable physics/collider on the picked-up object.
+    /// Only the picker sets up local hold state for rendering/interaction.
     /// </summary>
     [ClientRpc]
     private void ConfirmPickupClientRpc(ulong networkObjectId, ulong holderClientId)
     {
         if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj)) return;
 
-        // Only the picker does local hold setup
-        if (holderClientId != NetworkManager.Singleton.LocalClientId) return;
-
         Rigidbody rb = netObj.GetComponent<Rigidbody>();
         Collider col = netObj.GetComponentInChildren<Collider>();
+
+        // All clients disable physics so the held object doesn't cause phantom collisions
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.useGravity = false;
+            rb.isKinematic = true;
+        }
+        if (col != null) col.enabled = false;
+
+        // Only the picker sets up local hold state
+        if (holderClientId != NetworkManager.Singleton.LocalClientId) return;
         if (rb == null) return;
 
         _heldNetworkObject = netObj;
@@ -312,8 +322,8 @@ public class ObjectPickup : NetworkBehaviour
     }
 
     /// <summary>
-    /// Server takes ownership back from the client and applies the release velocity
-    /// so physics simulation is authoritative on the host.
+    /// Server takes ownership back from the client, applies the release velocity,
+    /// and tells all clients to restore physics on the object.
     /// </summary>
     [ServerRpc(RequireOwnership = false)]
     private void ReleaseNetworkObjectServerRpc(ulong networkObjectId, Vector3 velocity)
@@ -326,6 +336,25 @@ public class ObjectPickup : NetworkBehaviour
             rb.useGravity = true;
             rb.linearVelocity = velocity;
         }
+        // Tell all clients to re-enable physics/collider
+        RestoreObjectPhysicsClientRpc(networkObjectId);
+    }
+
+    /// <summary>
+    /// All clients restore physics state on a released object so it's
+    /// collidable and gravity-affected again.
+    /// </summary>
+    [ClientRpc]
+    private void RestoreObjectPhysicsClientRpc(ulong networkObjectId)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj)) return;
+        if (netObj.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+        }
+        if (netObj.TryGetComponent<Collider>(out var col))
+            col.enabled = true;
     }
 
     // ── Local pickup (non-NetworkObject) ────────────────────────────
@@ -729,6 +758,15 @@ public class ObjectPickup : NetworkBehaviour
     {
         if (_currentPlaceable == null || _heldObject == null) return;
 
+        // Networked path: route through ServerRpc
+        if (_heldNetworkObject != null)
+        {
+            PlaceOnShelfNetworked();
+            return;
+        }
+
+        // Local fallback (non-NetworkObject items, editor/single-player)
+
         // Prepare the object for placement
         if (_heldRigidbody != null)
         {
@@ -760,6 +798,95 @@ public class ObjectPickup : NetworkBehaviour
             // Placement failed — re-pickup the object
             PickupObject(_heldObject, _heldRigidbody, _heldCollider);
         }
+    }
+
+    // ── Networked shelf placement (held NetworkObject → shelf) ───────
+
+    private void PlaceOnShelfNetworked()
+    {
+        // Resolve ShelfSection + slot index from _currentPlaceable
+        ShelfSection section = null;
+        int slotIndex = -1;
+
+        if (_currentPlaceable is ShelfSlot directSlot)
+        {
+            // Player is looking directly at a ShelfSlot
+            section = directSlot.GetComponentInParent<ShelfSection>();
+            if (section != null)
+            {
+                var slots = section.GetSlots();
+                slotIndex = slots.IndexOf(directSlot);
+            }
+        }
+        else if (_currentPlaceable is ShelfSection sec)
+        {
+            // Player is looking at a ShelfSection — find first available slot
+            section = sec;
+            var slots = section.GetSlots();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (!slots[i].IsOccupied)
+                {
+                    slotIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (section == null || slotIndex < 0) return;
+
+        NetworkObject sectionNetObj = section.GetComponent<NetworkObject>();
+        if (sectionNetObj == null) return;
+
+        PlaceHeldItemOnShelfServerRpc(_heldNetworkObject.NetworkObjectId, sectionNetObj.NetworkObjectId, slotIndex);
+
+        // Optimistically clear held state on the placing client
+        _heldNetworkObject = null;
+        _heldObject = null;
+        _heldRigidbody = null;
+        _heldCollider = null;
+        _isHoldingInventoryBox = false;
+        _currentPlaceable = null;
+    }
+
+    /// <summary>
+    /// Server places an already-held NetworkObject onto a shelf slot.
+    /// Transfers ownership back to server, positions the item, and syncs slot count.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void PlaceHeldItemOnShelfServerRpc(ulong heldNetObjId, ulong sectionNetObjId, int slotIndex)
+    {
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(heldNetObjId, out var heldNetObj)) return;
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(sectionNetObjId, out var sectionNetObj)) return;
+
+        ShelfSlotNetwork slotNetwork = sectionNetObj.GetComponent<ShelfSlotNetwork>();
+        if (slotNetwork == null) return;
+
+        ShelfSlot slot = slotNetwork.GetSlotAt(slotIndex);
+        if (slot == null || slot.IsOccupied) return;
+
+        // Transfer ownership back to server
+        heldNetObj.ChangeOwnership(NetworkManager.ServerClientId);
+
+        // Restore physics
+        if (heldNetObj.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        if (heldNetObj.TryGetComponent<Collider>(out var col))
+            col.enabled = true;
+
+        // Place on the shelf (setParent: false for NetworkObjects)
+        slot.PlaceItem(heldNetObj.gameObject, setParent: false);
+
+        // Sync slot count to all clients
+        slotNetwork.RecordPlacement(slotIndex, slot.CurrentItemCount);
+
+        // Restore physics on all clients
+        RestoreObjectPhysicsClientRpc(heldNetObjId);
     }
 
     // Public method to check if currently looking at a placeable
