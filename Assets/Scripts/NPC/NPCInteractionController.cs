@@ -1019,9 +1019,12 @@ public class NPCInteractionController : NetworkBehaviour
         if (interaction == null) return;
 
         // npcIdentity is serialized on the prefab — available on all clients without network transfer.
-        // idCardSlot is a scene object (injected by NPCSpawnManager) — its focusCameraTarget
-        // exists on every client, so we read it directly instead of sending over RPC.
-        Transform focusTarget = idCardSlot != null ? idCardSlot.FocusCameraTarget : null;
+        // idCardSlot is injected by NPCSpawnManager.AssignSceneReferences() which only runs on the
+        // server. On clients, fall back to finding the scene IDCardSlot directly.
+        IDCardSlot slot = idCardSlot;
+        if (slot == null)
+            slot = FindFirstObjectByType<IDCardSlot>();
+        Transform focusTarget = slot != null ? slot.FocusCameraTarget : null;
         interaction.Initialize(npcIdentity, focusTarget);
         DebugLog($"[NPC] ID card initialized on client for '{npcIdentity?.fullName}'.");
     }
