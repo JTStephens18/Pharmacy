@@ -874,6 +874,7 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 | `ClientNetworkTransform.cs` | Owner-authoritative NetworkTransform. Overrides `OnIsServerAuthoritative()→false`. Add to Player prefab root. |
 | `PlayerSetup.cs` | `NetworkBehaviour` on Player root. `OnNetworkSpawn()`: enables all input/camera components for the owner, disables them for non-owners. Sets `PlayerComponents.Local`. |
 | `QuickConnect.cs` | Temporary `OnGUI` buttons (Start Host / Start Client). Attach to any scene object. Remove when lobby is implemented. |
+| `DisconnectHandler.cs` | Server-only: listens for client disconnects, force-releases station/dialogue locks, restores physics on held objects. Attach to persistent scene object. |
 
 ### Player Prefab — Required Components (root)
 `CharacterController` · `PlayerComponents` · `PlayerMovement` · `FocusStateManager` · `NetworkObject` · `ClientNetworkTransform` · `PlayerSetup`
@@ -909,11 +910,20 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 ### Known Timing Issue: NPCDialogueTrigger Warning
 `NPCDialogueTrigger.Start()` reads `PlayerComponents.Local` before the player spawns (scene `Start()` runs before `NetworkManager.StartHost()` is called). The warning `"Could not find PlayerComponents/PlayerMovement in scene"` is harmless — `_playerTransform` stays null until a player is nearby. **Fix planned in Player Registry tier**: subscribe to a player-spawned event and assign `_playerTransform` lazily.
 
+### Disconnect Handling
+
+**Script**: `DisconnectHandler.cs` — Attach to a persistent scene GameObject (requires `NetworkObject`).
+
+Server-only. Subscribes to `NetworkManager.OnClientDisconnectCallback` in `OnNetworkSpawn()` and cleans up all state held by the departing client:
+
+| Cleanup | How |
+|---|---|
+| Station locks (`ComputerScreen`, `PillCountingStation`, `IDCardInteraction`) | Calls `ForceReleaseLock(clientId)` on each instance — resets `_currentUserId` to `NoUser` |
+| Dialogue locks (`NPCDialogueTrigger`) | Calls `ForceReleaseLock(clientId)` — resets `_dialogueOwnerId` to `ulong.MaxValue` |
+| Held objects | Scans `SpawnedObjectsList` for non-player `NetworkObject`s owned by the client, transfers ownership to server, restores `Rigidbody` (non-kinematic, gravity on) and re-enables `Collider` |
+
+Each lockable script exposes `public void ForceReleaseLock(ulong clientId)` — server-only, no RPC needed.
+
 ### What Still Needs Networking (pending tiers)
-1. **Player Registry** — static `Dictionary<ulong, PlayerComponents>` so world scripts can find any/nearest player reliably. Fixes NPCDialogueTrigger timing issue.
-2. **Object Pickup** — pickup, throw, drop, bagging, delivery spawn all need ServerRpc/ClientRpc. Currently local-only.
-3. **Shelf & Inventory** — `ShelfSlot`, `ShelfSection`, `InventoryBox` need `NetworkObject` + `NetworkVariable` for synced state.
-4. **NPC System** — `NPCInteractionController`, `NPCSpawnManager`, `GameStarter` need host-only guards (`if (!IsServer) return`).
-5. **Counter & Checkout** — `CounterSlot`, `CashRegister` need ServerRpc flow.
-6. **Computer Screen / ID Card / Pill Counting** — exclusive-access locks via `NetworkVariable<ulong> CurrentUserId`.
-7. **Dialogue** — `DialogueManager` needs to move from scene singleton to per-player component on player prefab.
+1. **Object Pickup** — pickup, throw, drop, bagging all need full ServerRpc/ClientRpc flow. Currently local-only with `ClientNetworkTransform` sync.
+2. **Lobby** — Replace `QuickConnect.cs` with proper lobby UI.

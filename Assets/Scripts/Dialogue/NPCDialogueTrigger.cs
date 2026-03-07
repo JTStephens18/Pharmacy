@@ -311,6 +311,19 @@ public class NPCDialogueTrigger : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Server-only: force-releases the dialogue lock if held by the given client (e.g. on disconnect).
+    /// </summary>
+    public void ForceReleaseLock(ulong clientId)
+    {
+        if (!IsServer) return;
+        if (_dialogueOwnerId.Value == clientId)
+        {
+            _dialogueOwnerId.Value = ulong.MaxValue;
+            DebugLog($"[NPCDialogueTrigger] Dialogue lock force-released for disconnected client {clientId}");
+        }
+    }
+
     // ── Private Helpers ─────────────────────────────────────────────
 
     /// <summary>

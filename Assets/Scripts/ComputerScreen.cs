@@ -141,6 +141,16 @@ public class ComputerScreen : NetworkBehaviour
         _currentUserId.Value = NoUser;
     }
 
+    /// <summary>
+    /// Server-only: force-releases the lock if held by the given client (e.g. on disconnect).
+    /// </summary>
+    public void ForceReleaseLock(ulong clientId)
+    {
+        if (!IsServer) return;
+        if (_currentUserId.Value == clientId)
+            _currentUserId.Value = NoUser;
+    }
+
     // ── Internal Activate / Deactivate ───────────────────────────────
 
     private void DoActivate()
