@@ -60,4 +60,20 @@ public class PlayerSetup : NetworkBehaviour
     {
         PlayerRegistry.Unregister(OwnerClientId);
     }
+
+    /// <summary>
+    /// Called by PlayerSpawnManager on the server; delivered only to the owning client.
+    /// Teleports the player to the assigned spawn point. CharacterController must be
+    /// temporarily disabled for transform.position assignment to take effect.
+    /// </summary>
+    [ClientRpc]
+    public void TeleportToSpawnClientRpc(Vector3 position, Quaternion rotation, ClientRpcParams _ = default)
+    {
+        if (!IsOwner) return;
+
+        CharacterController cc = GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        if (cc != null) cc.enabled = true;
+    }
 }
