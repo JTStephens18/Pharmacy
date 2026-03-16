@@ -42,6 +42,7 @@ public class ObjectPickup : NetworkBehaviour
     private ComputerScreen _currentComputerScreen;
     private CashRegister _currentCashRegister;
     private IDCardInteraction _currentIDCard;
+    private Door _currentDoor;
 
     // ── Networked hold state ────────────────────────────────────────
     // When the held object is a NetworkObject we can't SetParent to the camera
@@ -72,6 +73,7 @@ public class ObjectPickup : NetworkBehaviour
         DetectComputerScreen();
         DetectCashRegister();
         DetectIDCard();
+        DetectDoor();
 
         if (Input.GetKeyDown(interactKey))
         {
@@ -751,6 +753,28 @@ public class ObjectPickup : NetworkBehaviour
         }
 
         _currentIDCard = newIDCard;
+    }
+
+    private void DetectDoor()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        Door newDoor = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask, QueryTriggerInteraction.Ignore))
+        {
+            newDoor = hit.collider.GetComponent<Door>();
+            if (newDoor == null)
+                newDoor = hit.collider.GetComponentInParent<Door>();
+        }
+
+        if (newDoor != _currentDoor)
+        {
+            if (_currentDoor != null) { _currentDoor.HideHighlight(); _currentDoor.Close(); }
+            if (newDoor != null) { newDoor.ShowHighlight(); newDoor.Open(); }
+        }
+
+        _currentDoor = newDoor;
     }
 
 
