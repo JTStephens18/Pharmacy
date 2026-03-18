@@ -25,6 +25,9 @@ public class GunCase : NetworkBehaviour
     [Header("Shooting")]
     [SerializeField] private float _shootRange = 50f;
 
+    [Tooltip("BloodSplatterEffect prefab instantiated at the impact point on all clients.")]
+    [SerializeField] private BloodSplatterEffect _bloodSplatterPrefab;
+
     [Header("Highlight")]
     [Tooltip("Optional child GameObject used as a highlight (e.g. emissive outline mesh). Shown when interaction is available.")]
     [SerializeField] private GameObject _highlightObject;
@@ -79,17 +82,18 @@ public class GunCase : NetworkBehaviour
         {
             NetworkObject netObj = npc.GetComponent<NetworkObject>();
             if (netObj != null)
-                ShootNPCServerRpc(netObj.NetworkObjectId);
+                ShootNPCServerRpc(netObj.NetworkObjectId, hit.point, hit.normal);
         }
         else
         {
             // Single-player fallback
             npc.Kill();
+            SpawnBloodSplatter(hit.point, hit.normal);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void ShootNPCServerRpc(ulong npcNetworkObjectId)
+    private void ShootNPCServerRpc(ulong npcNetworkObjectId, Vector3 hitPoint, Vector3 hitNormal)
     {
         if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(npcNetworkObjectId, out var netObj)) return;
 
@@ -97,6 +101,21 @@ public class GunCase : NetworkBehaviour
         if (npc == null) return;
 
         npc.Kill();
+        // Broadcast blood effect to all clients
+        SpawnBloodSplatterClientRpc(hitPoint, hitNormal);
+    }
+
+    [ClientRpc]
+    private void SpawnBloodSplatterClientRpc(Vector3 hitPoint, Vector3 hitNormal)
+    {
+        SpawnBloodSplatter(hitPoint, hitNormal);
+    }
+
+    private void SpawnBloodSplatter(Vector3 hitPoint, Vector3 hitNormal)
+    {
+        if (_bloodSplatterPrefab == null) return;
+        BloodSplatterEffect effect = Instantiate(_bloodSplatterPrefab);
+        effect.Initialize(hitPoint, hitNormal);
     }
 
     // ── Highlight helpers ────────────────────────────────────────────────────
