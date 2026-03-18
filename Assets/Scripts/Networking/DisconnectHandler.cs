@@ -46,6 +46,9 @@ public class DisconnectHandler : NetworkBehaviour
 
         foreach (var card in FindObjectsByType<IDCardInteraction>(FindObjectsSortMode.None))
             card.ForceReleaseLock(clientId);
+
+        foreach (var gunCase in FindObjectsByType<GunCase>(FindObjectsSortMode.None))
+            gunCase.ForceReleaseLock(clientId);
     }
 
     /// <summary>

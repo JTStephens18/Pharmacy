@@ -43,6 +43,7 @@ public class ObjectPickup : NetworkBehaviour
     private CashRegister _currentCashRegister;
     private IDCardInteraction _currentIDCard;
     private Door _currentDoor;
+    private GunCase _currentGunCase;
 
     // ── Networked hold state ────────────────────────────────────────
     // When the held object is a NetworkObject we can't SetParent to the camera
@@ -74,10 +75,16 @@ public class ObjectPickup : NetworkBehaviour
         DetectCashRegister();
         DetectIDCard();
         DetectDoor();
+        DetectGunCase();
 
         if (Input.GetKeyDown(interactKey))
         {
-            if (_heldObject == null)
+            // Gun case: highest priority — handles both pickup and return regardless of held state
+            if (_currentGunCase != null)
+            {
+                _currentGunCase.TryInteract(this);
+            }
+            else if (_heldObject == null)
             {
                 // Check for computer screen (interactable monitor)
                 if (_currentComputerScreen != null && !_currentComputerScreen.IsActive)
@@ -753,6 +760,31 @@ public class ObjectPickup : NetworkBehaviour
         }
 
         _currentIDCard = newIDCard;
+    }
+
+    private void DetectGunCase()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        GunCase newGunCase = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newGunCase = hit.collider.GetComponent<GunCase>();
+            if (newGunCase == null)
+                newGunCase = hit.collider.GetComponentInParent<GunCase>();
+        }
+
+        if (newGunCase != _currentGunCase)
+        {
+            if (_currentGunCase != null) _currentGunCase.HideHighlight();
+
+            // Show highlight only when interaction is available
+            if (newGunCase != null && (newGunCase.IsHeldByLocalPlayer || !newGunCase.IsHeld))
+                newGunCase.ShowHighlight();
+        }
+
+        _currentGunCase = newGunCase;
     }
 
     private void DetectDoor()

@@ -949,6 +949,17 @@ public class NPCInteractionController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Immediately removes this NPC from the scene, as if they had exited normally.
+    /// Server-only. Cleans up the ID card and fires OnNPCExited so the spawn queue advances.
+    /// </summary>
+    public void Kill()
+    {
+        if (!IsServer) return;
+        CleanupIDCard();
+        DespawnOrDestroy();
+    }
+
     // ── ID Card ──────────────────────────────────────────────────────
 
     /// <summary>
