@@ -87,6 +87,7 @@ public class NPCInteractionController : NetworkBehaviour
     private IInteractable _currentTarget;
     private GameObject _currentTargetObject;
     private List<InteractableItem> _heldItems = new List<InteractableItem>();
+    private List<GameObject> _placedCounterItems = new List<GameObject>();
     private Dictionary<GameObject, float> _unreachableItems = new Dictionary<GameObject, float>(); // Items we couldn't path to
     private float _scanTimer;
     private float _pauseTimer;
@@ -503,6 +504,7 @@ public class NPCInteractionController : NetworkBehaviour
                         // Place in slot (handles positioning and physics)
                         slot.PlaceItem(item.gameObject);
                         placedItems.Add(item);
+                        _placedCounterItems.Add(item.gameObject);
 
                         // Broadcast to all clients that this NetworkObject is now a counter item,
                         // so non-host clients can detect it during player interaction
@@ -957,7 +959,40 @@ public class NPCInteractionController : NetworkBehaviour
     {
         if (!IsServer) return;
         CleanupIDCard();
+        CleanupCounterItems();
         DespawnOrDestroy();
+    }
+
+    /// <summary>
+    /// Destroys all items this NPC placed on the counter.
+    /// Called on Kill() so items don't linger after the NPC is shot.
+    /// Server-only.
+    /// </summary>
+    private void CleanupCounterItems()
+    {
+        foreach (GameObject item in _placedCounterItems)
+        {
+            if (item == null) continue;
+
+            NetworkObject netObj = item.GetComponent<NetworkObject>();
+            CounterSlot slot = CounterSlot.GetSlotContaining(item);
+
+            if (slot != null)
+                slot.RemoveItem(item);
+
+            if (netObj != null && netObj.IsSpawned)
+            {
+                CounterSlotNetwork slotNetwork = slot != null ? slot.GetComponent<CounterSlotNetwork>() : null;
+                if (slotNetwork != null)
+                    slotNetwork.RecordRemoval(netObj.NetworkObjectId);
+                netObj.Despawn(true);
+            }
+            else
+            {
+                Destroy(item);
+            }
+        }
+        _placedCounterItems.Clear();
     }
 
     // ── ID Card ──────────────────────────────────────────────────────

@@ -88,7 +88,7 @@ public class GunCase : NetworkBehaviour
         {
             // Single-player fallback
             npc.Kill();
-            SpawnBloodSplatter(hit.point, hit.normal);
+            SpawnBloodSplatter(hit.point, hit.normal, Random.Range(int.MinValue, int.MaxValue));
         }
     }
 
@@ -101,21 +101,23 @@ public class GunCase : NetworkBehaviour
         if (npc == null) return;
 
         npc.Kill();
-        // Broadcast blood effect to all clients
-        SpawnBloodSplatterClientRpc(hitPoint, hitNormal);
+        // Generate seed here (server) so all clients use the same value and
+        // produce identical decal placement.
+        int seed = Random.Range(int.MinValue, int.MaxValue);
+        SpawnBloodSplatterClientRpc(hitPoint, hitNormal, seed);
     }
 
     [ClientRpc]
-    private void SpawnBloodSplatterClientRpc(Vector3 hitPoint, Vector3 hitNormal)
+    private void SpawnBloodSplatterClientRpc(Vector3 hitPoint, Vector3 hitNormal, int seed)
     {
-        SpawnBloodSplatter(hitPoint, hitNormal);
+        SpawnBloodSplatter(hitPoint, hitNormal, seed);
     }
 
-    private void SpawnBloodSplatter(Vector3 hitPoint, Vector3 hitNormal)
+    private void SpawnBloodSplatter(Vector3 hitPoint, Vector3 hitNormal, int seed)
     {
         if (_bloodSplatterPrefab == null) return;
         BloodSplatterEffect effect = Instantiate(_bloodSplatterPrefab);
-        effect.Initialize(hitPoint, hitNormal);
+        effect.Initialize(hitPoint, hitNormal, seed);
     }
 
     // ── Highlight helpers ────────────────────────────────────────────────────

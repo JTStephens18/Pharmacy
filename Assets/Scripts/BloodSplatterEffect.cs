@@ -35,12 +35,17 @@ public class BloodSplatterEffect : MonoBehaviour
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
+    // Seed received from the server — ensures all clients scatter decals identically.
+    private int _seed;
+
     /// <summary>
     /// Positions the effect, plays particles, and scatters decals on nearby surfaces.
+    /// <paramref name="seed"/> must be the same value on every client so decal placement is deterministic.
     /// </summary>
-    public void Initialize(Vector3 hitPoint, Vector3 hitNormal)
+    public void Initialize(Vector3 hitPoint, Vector3 hitNormal, int seed)
     {
         transform.position = hitPoint;
+        _seed = seed;
 
         if (_bloodParticles != null)
             _bloodParticles.Play();
@@ -59,7 +64,14 @@ public class BloodSplatterEffect : MonoBehaviour
     private IEnumerator ScatterNextFrame(Vector3 hitPoint, Vector3 hitNormal)
     {
         yield return null; // wait one frame for NPC Destroy() to process
+
+        // Seed Random so every client produces the exact same rays, prefab picks,
+        // rotations, and decal scales. State is saved/restored so we don't
+        // disrupt any other system that relies on UnityEngine.Random.
+        Random.State savedState = Random.state;
+        Random.InitState(_seed);
         ScatterDecals(hitPoint, hitNormal);
+        Random.state = savedState;
     }
 
     // ── Decal placement ───────────────────────────────────────────────────────
