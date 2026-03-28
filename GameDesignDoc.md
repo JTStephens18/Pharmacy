@@ -78,12 +78,19 @@ Each shift draws from a randomized NPC pool. A portion of those NPCs are doppelg
 
 **Question budget.** The player can ask each NPC a limited number of questions (suggested: 5) before the NPC gets impatient and leaves. Questions must be chosen carefully — ask about DOB, their doctor, their address, their last fill, or their symptoms. Choosing what to investigate under time pressure is the primary skill expression.
 
+**There are no approve/reject buttons.** The player's decisions are expressed entirely through physical actions:
+
+- **Approve** = let the NPC check out at the cash register (the existing checkout flow). The player walks to the register and rings them up.
+- **Reject** = shoot the NPC with the gun. This is the only way to eliminate a suspected doppelganger.
+
 **Consequences of decisions:**
 
-- Correct rejection → doppelganger can be physically eliminated. Always leaves a mess — blood, ichor, or residue — that must be cleaned up before the next customer arrives. Body must be disposed of.
-- Correct approval → patient filled, quota progresses
-- Wrong rejection → real patient complaint, money penalty
-- Wrong approval → doppelganger receives medication and escapes silently → monster spawns at closing
+- Correct kill (shot a doppelganger) → blood, ichor, or residue that must be cleaned up before the next customer arrives. Body must be disposed of. Doppelganger neutralized.
+- Correct checkout (approved a real patient) → patient filled, quota progresses
+- Wrong kill (shot a real patient) → severe money penalty, blood cleanup required, customer lost
+- Wrong checkout (approved a doppelganger) → doppelganger receives medication and escapes silently → monster spawns at closing
+
+The tension comes from uncertainty. The computer gives you information, but **you** have to decide what to do with it — and then physically do it. Walking to the register is an act of trust. Picking up the gun is an act of judgment.
 
 The delay between a missed doppelganger and its consequence is intentional. The horror arrives at closing — not immediately.
 
@@ -311,8 +318,8 @@ No roles are locked — players coordinate naturally based on situation.
 
 ## Open Design Questions
 
-- [ ] Should rejected doppelgangers leave silently, react visibly, or give the player a brief window to eliminate them before they escape?
-- [ ] What does doppelganger elimination look like physically — shooting, a dedicated action, or counter-based interaction?
+- [x] ~~Should rejected doppelgangers leave silently, react visibly, or give the player a brief window to eliminate them before they escape?~~ **Resolved: There is no "reject" button. The player shoots suspected doppelgangers with the gun.**
+- [x] ~~What does doppelganger elimination look like physically — shooting, a dedicated action, or counter-based interaction?~~ **Resolved: Shooting. The gun is the rejection mechanism.**
 - [ ] Does the monster have a visible tell before it attacks, or is contact with it an immediate consequence?
 - [ ] Does the player have a health / strike system, or is any monster contact a full fail state?
 - [ ] Should there be an in-world explanation for the recipe notes — who left them and why?

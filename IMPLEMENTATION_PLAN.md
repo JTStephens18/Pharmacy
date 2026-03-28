@@ -174,27 +174,23 @@ public class QueueEntry
 
 `ShiftManager` resolves doppelganger assignments at shift start: picks N random NPCs from the queue to be doppelgangers (unless `forceDoppelganger` is already set), assigns `DoppelgangerProfile` assets from a pool. This is server-only logic.
 
-#### 2d. Verification Flow on Computer Screen
+#### 2d. Decision Flow — No Buttons, Physical Actions Only
 
-**New computer view: "Patient Verification"** — added to `ComputerScreenController.views[]`.
+**There are no approve/reject buttons on the computer.** The computer is purely an information tool. The player's decisions are expressed through physical actions:
 
-Shows:
-- Patient photo (from `NPCIdentity` or doppelganger override)
-- Prescription details (medication, quantity, dosage, prescriber)
-- Fill history
-- Prescriber database lookup (NPI validation)
-- **Approve** and **Reject** buttons
+- **Approve** = walk to the cash register and ring the NPC up (existing `CashRegister` checkout flow). If the NPC was a doppelganger, it escapes silently → `ShiftManager._escapedDoppelgangers++`.
+- **Reject** = shoot the NPC with the gun (existing `GunCase` → `NPCInteractionController.Kill()` flow). If the NPC was real, money penalty + blood cleanup. If the NPC was a doppelganger, caught → blood cleanup, no monster spawn for this one.
 
-The verification view is populated when the player scans an NPC's ID card (existing `NPCInfoDisplay.ShowNPCInfo` flow). Extend `NPCInfoDisplay` to also populate prescription fields from the NPC's `PrescriptionData`.
+This means the computer screen only needs to **display information** — it already does this via `NPCInfoDisplay` and `NPCIdentityField`. The extension is adding prescription/prescriber data to the display (see section 3), not adding action buttons.
 
-**Approve button:** `ApprovePatientServerRpc(npcNetworkId)` — server checks if NPC is a doppelganger. If yes, increments `ShiftManager._escapedDoppelgangers` and the NPC exits silently. If no, normal checkout proceeds.
-
-**Reject button:** `RejectPatientServerRpc(npcNetworkId)` — server checks. If correct rejection (NPC is a doppelganger), NPC enters a new `Rejected` state. If wrong rejection (real patient), money penalty via the quota system.
+**Server-side outcome resolution:**
+- `CashRegister.ProcessCheckoutServerRpc()` → after triggering NPC exit, server checks `npc.IsDoppelganger`. If true, calls `ShiftManager.ReportEscape()`. If false, calls `ShiftScoreManager.RecordCorrectApproval()`.
+- `GunCase.ShootNPCServerRpc()` → after calling `npc.Kill()`, server checks `npc.IsDoppelganger`. If true, calls `ShiftScoreManager.RecordCorrectKill()`. If false, calls `ShiftScoreManager.RecordWrongKill()`.
 
 **Multiplayer notes:**
-- Approve/Reject are ServerRpcs. Server validates and broadcasts result.
-- Only the player currently at the computer (locked via `ComputerScreen._currentUserId`) can submit decisions.
-- Other players see the NPC's reaction but not the computer screen details.
+- Both checkout and shooting already go through ServerRpcs. Outcome checking is a small addition to existing server-side logic.
+- Any player can check out or shoot any NPC — no exclusive lock needed for the decision itself.
+- The tension is collaborative: one player might be at the computer calling out "this NPI looks wrong" while another player is at the counter deciding whether to ring up or reach for the gun.
 
 #### 2e. Question Budget
 
@@ -208,9 +204,11 @@ This integrates directly with the existing `NPCDialogueTrigger.StartInfoDialogue
 
 ## 3. Prescription Verification UI (Missing)
 
-**What the design doc says:** Pull up patient record on the computer. Cross-reference physical script with database: photo ID, DOB, address, prescriber NPI, fill history, dose consistency. Decide to approve or reject.
+**What the design doc says:** Pull up patient record on the computer. Cross-reference physical script with database: photo ID, DOB, address, prescriber NPI, fill history, dose consistency.
 
 **What exists:** `ComputerScreenController` supports tabbed views. `NPCInfoDisplay` shows basic NPC identity (name, DOB, address, photo). `NPCIdentityField` auto-populates TMP elements.
+
+**Key design point:** The computer is an **information-only tool**. There are no approve/reject buttons. The player reads the data, forms a judgment, then physically acts on it — either ringing the customer up at the cash register (approve) or shooting them with the gun (reject).
 
 ### Implementation
 
@@ -236,12 +234,12 @@ Extend the existing computer screen with two new views:
 
 **New ScriptableObject: `PrescriberDatabase.cs`** — contains a list of valid prescriber entries. Shared across all clients as a game asset.
 
-**Approve/Reject buttons** live on the Patient Record view. They call ServerRpcs on a new `VerificationManager.cs` (NetworkBehaviour) that resolves outcomes.
+No action buttons needed on the computer. The player exits the computer (Escape), walks to the register or picks up the gun, and acts.
 
 **Multiplayer notes:**
 - The computer screen is already exclusively locked per player. No contention issues.
 - Prescription data is read from ScriptableObjects on the NPC prefab — available on all clients.
-- Approve/Reject decisions go through ServerRpcs. Results broadcast via ClientRpc (NPC reaction visible to all).
+- One player can be reading the computer while another acts on previously gathered information — natural co-op division of labor.
 
 ---
 
@@ -562,38 +560,42 @@ CraftedWeapon (abstract base)
 - Trap placement: `PlaceTrapServerRpc(position, rotation)` → server spawns trap NetworkObject.
 - Projectile (vial): `ThrowVialServerRpc(direction)` → server spawns projectile NetworkObject with velocity.
 
-**Integration with GunCase:** The gun is a day-shift tool (for eliminating confirmed doppelgangers). Crafted weapons are night-shift tools (for killing the monster). They use the same hold-slot pattern but are mutually exclusive — player can hold one weapon at a time.
+**Integration with GunCase:** The gun is the day-shift rejection tool — shooting an NPC is how the player "rejects" a suspected doppelganger. There are no approve/reject buttons; it's all physical action. Crafted weapons are night-shift tools for killing the monster. They use the same hold-slot pattern but are mutually exclusive — player can hold one weapon at a time.
 
 ---
 
-## 11. Doppelganger Elimination Flow (Missing)
+## 11. Doppelganger Elimination Flow (Partial — mostly exists)
 
-**What the design doc says:** Correct rejection → doppelganger can be physically eliminated. Always leaves a mess (blood, ichor) that must be cleaned before the next customer.
+**What the design doc says:** Shooting is the rejection mechanism. Always leaves blood that must be cleaned before the next customer.
 
-**What exists:** Gun + `Kill()` + blood splatter + mop cleanup all work.
+**What exists:** `GunCase` → shoot NPC → `NPCInteractionController.Kill()` → `BloodSplatterEffect` → `BloodDecal` → `Mop` cleanup. **This entire chain already works.**
 
-### Implementation
+### Implementation — what's needed
 
-When a player correctly rejects a doppelganger via the computer's Reject button:
-1. Server sets NPC state to new `Rejected` state.
-2. NPC plays a reaction (agitated animation, backs away from counter).
-3. NPC enters `Vulnerable` state briefly — player can shoot them with the gun.
-4. `Kill()` triggers blood splatter (existing system).
-5. `ShiftManager` tracks that this doppelganger was caught (not escaped).
-6. Next NPC does not spawn until blood is cleaned (check `BloodDecal.Active.Count == 0`).
+The physical elimination flow is already built. The missing pieces are:
 
-**Alternative (simpler, depends on design decision):** Rejection auto-eliminates the doppelganger (no shooting required). Triggers blood splatter at NPC position, NPC despawns. This avoids the open design question about physical elimination and uses existing systems directly.
+1. **Outcome resolution in `GunCase.ShootNPCServerRpc()`** — after calling `npc.Kill()`, check `npc.IsDoppelganger`:
+   - True → `ShiftScoreManager.RecordCorrectKill()` (doppelganger neutralized)
+   - False → `ShiftScoreManager.RecordWrongKill()` (money penalty, you shot a real customer)
+
+2. **Outcome resolution in `CashRegister.ProcessCheckoutServerRpc()`** — after triggering NPC exit, check `npc.IsDoppelganger`:
+   - True → `ShiftManager.ReportEscape()` + `ShiftScoreManager.RecordWrongApproval()` (doppelganger escapes)
+   - False → `ShiftScoreManager.RecordCorrectApproval()` (real patient served)
+
+3. **Spawn gating** — `NPCSpawnManager` checks `BloodDecal.Active.Count == 0` on the server before spawning the next NPC. Forces cleanup between customers.
+
+4. **Optional: body disposal** — After shooting, the NPC ragdolls (or a body prefab remains). Player must drag/carry it to a disposal point (e.g. dumpster behind the delivery room). This adds a physical cost to killing and prevents the pharmacy from looking like a crime scene. Lower priority — can ship without this.
 
 **Multiplayer notes:**
-- Rejection is a ServerRpc (already described in section 2).
-- Blood splatter broadcast via existing `SpawnBloodSplatterClientRpc`.
-- Cleanup check (`BloodDecal.Active.Count`) is server-side before allowing next NPC spawn.
+- All existing. `ShootNPCServerRpc` and `ProcessCheckoutServerRpc` already run on the server. Adding a doppelganger check is a few lines of server-side logic.
+- Blood cleanup is already networked (`Mop.CleanDecalsServerRpc` → `CleanDecalsClientRpc`).
+- Any player can shoot any NPC. Any player can clean up. Natural co-op: one investigates, one acts, one cleans.
 
 ---
 
 ## 12. Quota & Money System (Missing)
 
-**What the design doc says:** Wrong rejection = real patient complaint, money penalty. Doppelgangers escaping has consequences. Quota/money system tracks player performance.
+**What the design doc says:** Shooting a real patient = severe money penalty. Letting a doppelganger check out = monster at closing. Quota/money system tracks player performance.
 
 **What exists:** Nothing.
 
@@ -606,15 +608,17 @@ public class ShiftScoreManager : NetworkBehaviour
 {
     public NetworkVariable<int> Money;
     public NetworkVariable<int> CustomersServed;
-    public NetworkVariable<int> CustomerComplaints;
     public NetworkVariable<int> DoppelgangersCaught;
     public NetworkVariable<int> DoppelgangersEscaped;
+    public NetworkVariable<int> InnocentsKilled;
 
-    // Called by VerificationManager
+    // Called by CashRegister.ProcessCheckoutServerRpc after NPC exit
     public void RecordCorrectApproval()    { Money.Value += 50; CustomersServed.Value++; }
-    public void RecordWrongApproval()      { DoppelgangersEscaped.Value++; }
-    public void RecordCorrectRejection()   { DoppelgangersCaught.Value++; Money.Value += 25; }
-    public void RecordWrongRejection()     { CustomerComplaints.Value++; Money.Value -= 30; }
+    public void RecordWrongApproval()      { DoppelgangersEscaped.Value++; }  // doppelganger slipped through
+
+    // Called by GunCase.ShootNPCServerRpc after npc.Kill()
+    public void RecordCorrectKill()        { DoppelgangersCaught.Value++; Money.Value += 25; }
+    public void RecordWrongKill()          { InnocentsKilled.Value++; Money.Value -= 100; }  // shot a real customer
 }
 ```
 
@@ -743,8 +747,9 @@ When `isOTCCustomer` is true:
 ### Phase 1 — Core Loop (makes the game playable as designed)
 1. **Shift Manager** — backbone for everything else
 2. **Doppelganger System** — primary gameplay mechanic
-3. **Prescription Verification UI** — the decision-making interface
-4. **Quota/Money System** — consequences for decisions
+3. **Prescription Verification UI** — information display (no buttons — decisions are physical: cash register = approve, gun = reject)
+4. **Doppelganger Outcome Hooks** — add `IsDoppelganger` checks to existing `CashRegister` + `GunCase` ServerRpcs
+5. **Quota/Money System** — consequences for decisions
 
 ### Phase 2 — Night Mode (the horror half)
 5. **Monster AI** — the threat
@@ -754,9 +759,9 @@ When `isOTCCustomer` is true:
 9. **Mortar Station** — ingredient processing
 10. **Lighting & Atmosphere** — tension and pacing
 
-### Phase 3 — Weapon Variety
+### Phase 3 — Weapon Variety & Polish
 11. **Crafted Weapons** (all 4 types) — night mode resolution
-12. **Doppelganger Elimination Flow** — day mode consequence
+12. **Body Disposal** (optional) — drag killed NPCs to disposal point
 
 ### Phase 4 — Polish & Depth
 13. **Question Budget** — verification skill expression
@@ -774,7 +779,7 @@ Every new system follows the established patterns:
 |---|---|---|
 | `NetworkVariable<int>` state sync | `NPCInteractionController`, `ShiftManager` | `MonsterController`, `ShiftManager`, `CraftingManager` |
 | `NetworkVariable<ulong>` exclusive lock | `ComputerScreen`, `PillCountingStation`, `GunCase` | `MortarStation`, `CraftedWeapon`, `DispensaryCabinet` |
-| ServerRpc → ClientRpc action broadcast | `ObjectPickup`, `Mop`, `GunCase` | `VerificationManager`, `CraftingManager`, `NoiseSystem` |
+| ServerRpc → ClientRpc action broadcast | `ObjectPickup`, `Mop`, `GunCase` | `CraftingManager`, `NoiseSystem` |
 | Server-only AI + NetworkTransform | `NPCInteractionController` | `MonsterController` |
 | `ForceReleaseLock(clientId)` disconnect cleanup | All lockable scripts | `MortarStation`, `CraftedWeapon` |
 | Non-spawned local fallback | All NetworkBehaviours | All new NetworkBehaviours |
