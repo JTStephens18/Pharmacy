@@ -25,7 +25,8 @@ Assets/Scripts/
 ├── ObjectPickup.cs            # Central interaction hub (pickup, throw, place, interact)
 ├── HoldableItem.cs            # Per-item hold offset overrides
 ├── FrameRateManager.cs        # Static 60 FPS initializer
-├── GameStarter.cs             # Triggers NPCSpawnManager.StartNPCSpawning() on Start
+├── ShiftManager.cs            # Server-authoritative day/night cycle state machine
+├── GameStarter.cs             # Routes to ShiftManager.StartDayShift() (or legacy NPCSpawnManager fallback)
 ├── CashRegister.cs            # Checkout trigger
 ├── ComputerScreen.cs          # Computer focus + UI activation
 ├── ComputerScreenController.cs# View/tab manager for computer UI
@@ -595,12 +596,96 @@ public void AssignSceneReferences(List<CounterSlot> counters, Transform exit, ID
 Called by `NPCSpawnManager` after instantiation. Also auto-enables `useShelfSlots` if shelf slots are provided.
 
 ### GameStarter.cs
-Attach to any persistent GameObject. Calls `NPCSpawnManager.StartNPCSpawning(roundConfig)` in `Start()`.
+Attach to any persistent GameObject. Routes to `ShiftManager.StartDayShift()` when a ShiftManager is assigned. Falls back to calling `NPCSpawnManager.StartNPCSpawning(roundConfig)` directly if no ShiftManager is present.
+
+| Field | Purpose |
+|---|---|
+| `shiftManager` | **(Preferred)** Reference to the `ShiftManager` — drives the full day/night cycle |
+| `spawnManager` | **(Legacy fallback)** Direct reference to `NPCSpawnManager`, only used when `shiftManager` is null |
+| `roundConfig` | **(Legacy fallback)** The `RoundConfig` asset, only used when `shiftManager` is null |
+
+---
+
+## System 13: Shift Manager
+
+**Script**: `ShiftManager.cs` — `NetworkBehaviour` on a persistent scene GameObject.
+
+Server-authoritative state machine that drives the day/night cycle. All state is in `NetworkVariable`s — clients read them for UI, lighting, and audio.
+
+### Phase Flow
+
+```
+Dawn → DayShift → (all NPCs finished)
+  ├── 0 escaped doppelgangers → Dawn (clean end, skip night)
+  └── 1+ escaped doppelgangers → Transition → NightShift → Dawn → DayShift → ...
+```
+
+### Phases
+
+| Phase | What Happens |
+|---|---|
+| `Dawn` | Cleanup, score screen, prep. After `dawnDuration` seconds → `DayShift` |
+| `DayShift` | NPCs arrive via `NPCSpawnManager`. Player verifies prescriptions. Ends when `OnAllNPCsFinished` fires |
+| `Transition` | Atmospheric beat (lights flicker, audio sting). Lasts `transitionDuration` seconds → `NightShift` |
+| `NightShift` | Monster(s) spawn based on `EscapedDoppelgangers`. Ends when all monsters killed or `nightDuration` expires → `Dawn` |
+
+### NetworkVariables
+
+| Variable | Type | Purpose |
+|---|---|---|
+| `CurrentPhase` | `NetworkVariable<int>` | Current `ShiftPhase` enum value — clients read for UI/lighting/audio |
+| `EscapedDoppelgangers` | `NetworkVariable<int>` | Doppelgangers that escaped this day shift. Reset each day |
+| `CurrentNight` | `NetworkVariable<int>` | Night number (1-based). Increments each dawn |
+
+### Events (server-side)
+
+| Event | When |
+|---|---|
+| `OnPhaseChanged(ShiftPhase)` | Every phase transition |
+| `OnDayShiftStarted` | Day shift begins |
+| `OnNightShiftStarted` | Night shift begins |
+| `OnShiftCycleCompleted` | Dawn reached (full cycle done) |
+
+### Public API (server-only)
+
+| Method | Purpose |
+|---|---|
+| `StartDayShift()` | Begin a day shift. Called by `GameStarter` |
+| `ReportEscape()` | Increment escaped doppelgangers. Called by `CashRegister` when a doppelganger is approved |
+| `OnDawnReached()` | End night shift → dawn. Called by dawn timer or when all monsters die |
+| `OnMonsterKilled()` | Report a monster kill. Ends night early if all dead |
+| `ForcePhase(ShiftPhase)` | **Debug only.** Force-jump to any phase |
+
+### Debug Tools
+
+Set `enableDebugTools = true` in the Inspector (or call `SetDebugTools(true)` at runtime) to show an OnGUI overlay (top-right corner, server/host only) with:
+
+- **Status display**: Current phase, night number, escaped doppelgangers, NPC spawning state
+- **Force Phase buttons**: Instantly jump to Dawn / DayShift / Transition / NightShift
+- **Escaped Doppelganger controls**: +1 / -1 / Reset
+- **Night counter controls**: +1 / -1 / Reset to 1
+- **Skip Current Timer**: Advances to the next phase immediately (skips dawn wait, forces NPCs finished, skips transition, or ends night)
+
+Debug tools are compiled out of release builds (`#if UNITY_EDITOR || DEVELOPMENT_BUILD`).
+
+### Inspector Fields
 
 | Field | Purpose |
 |---|---|
 | `spawnManager` | Reference to the `NPCSpawnManager` in the scene |
-| `roundConfig` | The `RoundConfig` ScriptableObject asset to use |
+| `defaultRoundConfig` | `RoundConfig` asset for day shifts (future: dynamic generation per night) |
+| `dawnDuration` | Seconds in Dawn before next day starts (default 5) |
+| `transitionDuration` | Seconds of transition effects before night (default 4) |
+| `nightDuration` | Night length in seconds (default 120, 0 = infinite / monster-kill only) |
+| `enableDebugTools` | Toggle the runtime debug overlay |
+
+### Editor Setup
+
+- [ ] Create a persistent scene GameObject with `ShiftManager` + `NetworkObject`
+- [ ] Assign `spawnManager` (existing `NPCSpawnManager` in scene)
+- [ ] Assign `defaultRoundConfig` (existing `RoundConfig` asset)
+- [ ] On `GameStarter`: assign the new `ShiftManager` reference (clear old `spawnManager`/`roundConfig` fields)
+- [ ] Optional: check `enableDebugTools` for testing
 
 ### NPC Prefab Setup (for spawning)
 NPC prefabs should have these fields filled in (they survive prefabbing as asset/internal refs):
@@ -647,9 +732,15 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
 NPCInteractionController ──→ IDCardSlot ──→ IDCardInteraction ──→ IDCardVisuals
                                                └──→ NPCInfoDisplay (panel toggle on scan)
 
-GameStarter ──→ NPCSpawnManager ──→ NPCInteractionController (instantiate + inject scene refs)
-                     │                        │
-                     └── RoundConfig          └──→ OnNPCExited (static event → triggers next spawn)
+GameStarter ──→ ShiftManager ──→ NPCSpawnManager ──→ NPCInteractionController (instantiate + inject scene refs)
+                     │                │                        │
+                     │                └── RoundConfig          └──→ OnNPCExited (static event → triggers next spawn)
+                     │
+                     ├── OnAllNPCsFinished ──→ ShiftManager.OnAllNPCsFinished()
+                     │                              ├── 0 escaped → Dawn → next DayShift
+                     │                              └── 1+ escaped → Transition → NightShift → Dawn
+                     │
+                     └── CashRegister / GunCase ──→ ShiftManager.ReportEscape() (doppelganger approved)
 
 DialogueManager ──→ DialogueHistory (records exchanges)
 ```

@@ -181,7 +181,7 @@ public class QueueEntry
 - **Approve** = walk to the cash register and ring the NPC up (existing `CashRegister` checkout flow). If the NPC was a doppelganger, it escapes silently → `ShiftManager._escapedDoppelgangers++`.
 - **Reject** = shoot the NPC with the gun (existing `GunCase` → `NPCInteractionController.Kill()` flow). If the NPC was real, money penalty + blood cleanup. If the NPC was a doppelganger, caught → blood cleanup, no monster spawn for this one.
 
-This means the computer screen only needs to **display information** — it already does this via `NPCInfoDisplay` and `NPCIdentityField`. The extension is adding prescription/prescriber data to the display (see section 3), not adding action buttons.
+This means the computer screen only needs to **display information** — it already does this via `NPCInfoDisplay` and `NPCIdentityField`. The extension is adding prescription/prescriber data to the display (see section 3), not adding action buttons. It should, however, have buttons that can trigger new NPC dialogue (already implemented)
 
 **Server-side outcome resolution:**
 - `CashRegister.ProcessCheckoutServerRpc()` → after triggering NPC exit, server checks `npc.IsDoppelganger`. If true, calls `ShiftManager.ReportEscape()`. If false, calls `ShiftScoreManager.RecordCorrectApproval()`.

@@ -35,6 +35,7 @@ public class PlayerMovement : NetworkBehaviour
     void Update()
     {
         if (!IsOwner) return;
+        if (ShiftManager.IsDebugUIActive) return;
         HandleGroundCheck();
         HandleMovement();
         HandleJumping();

@@ -54,6 +54,7 @@ public class MouseLook : NetworkBehaviour
     void Update()
     {
         if (!IsOwner) return;
+        if (ShiftManager.IsDebugUIActive) return;
         HandleLook();
         HandleShake();
     }

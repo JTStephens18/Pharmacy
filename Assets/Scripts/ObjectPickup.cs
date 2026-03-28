@@ -66,6 +66,7 @@ public class ObjectPickup : NetworkBehaviour
     void Update()
     {
         if (!IsOwner) return;
+        if (ShiftManager.IsDebugUIActive) return;
         // Always detect placeable targets for highlight (some slots show even without held item)
         DetectPlaceable();
         DetectDeliveryStation();
