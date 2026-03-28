@@ -52,6 +52,29 @@ public class NPCIdentityField : MonoBehaviour
         };
     }
 
+    /// <summary>
+    /// Populates with doppelganger-overridden data. Fake values replace real ones where applicable.
+    /// </summary>
+    public void Populate(NPCIdentity identity, DoppelgangerProfile profile)
+    {
+        if (_text == null || identity == null) return;
+
+        if (profile == null)
+        {
+            Populate(identity);
+            return;
+        }
+
+        _text.text = fieldType switch
+        {
+            FieldType.FullName    => identity.fullName,
+            FieldType.DateOfBirth => profile.GetDOB(identity.dateOfBirth),
+            FieldType.Address     => profile.GetAddress(identity.address),
+            FieldType.IDNumber    => identity.idNumber,
+            _                    => string.Empty,
+        };
+    }
+
     /// <summary>Clears the text.</summary>
     public void Clear()
     {

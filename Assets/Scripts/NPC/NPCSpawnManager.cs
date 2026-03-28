@@ -32,7 +32,14 @@ public class NPCSpawnManager : MonoBehaviour
     public event Action<NPCInteractionController> OnNPCSpawned;
     public event Action OnAllNPCsFinished;
 
-    private Queue<GameObject> _spawnQueue = new Queue<GameObject>();
+    /// <summary>Pairs an NPC prefab with an optional doppelganger profile for spawning.</summary>
+    private struct SpawnEntry
+    {
+        public GameObject prefab;
+        public DoppelgangerProfile doppelgangerProfile; // null = real patient
+    }
+
+    private Queue<SpawnEntry> _spawnQueue = new Queue<SpawnEntry>();
     private NPCInteractionController _activeNPC;
     private Coroutine _spawnCoroutine;
     private bool _isSpawning;
@@ -64,8 +71,8 @@ public class NPCSpawnManager : MonoBehaviour
 
         StopNPCSpawning();
 
-        List<GameObject> resolvedQueue = ResolveQueue(config);
-        _spawnQueue = new Queue<GameObject>(resolvedQueue);
+        List<SpawnEntry> resolvedQueue = ResolveQueue(config);
+        _spawnQueue = new Queue<SpawnEntry>(resolvedQueue);
 
         NPCInteractionController.OnNPCExited += HandleNPCExited;
         _isSpawning = true;
@@ -87,13 +94,16 @@ public class NPCSpawnManager : MonoBehaviour
         _isSpawning = false;
     }
 
-    private List<GameObject> ResolveQueue(RoundConfig config)
+    private List<SpawnEntry> ResolveQueue(RoundConfig config)
     {
         List<GameObject> availablePool = new List<GameObject>(config.npcPool);
-        List<GameObject> resolved = new List<GameObject>();
+        List<SpawnEntry> resolved = new List<SpawnEntry>();
 
+        // Phase 1: Resolve NPC prefabs (same logic as before).
         foreach (QueueEntry entry in config.queueEntries)
         {
+            SpawnEntry spawn = new SpawnEntry();
+
             if (entry.isFixed)
             {
                 if (entry.fixedNpcPrefab == null)
@@ -102,7 +112,7 @@ public class NPCSpawnManager : MonoBehaviour
                     continue;
                 }
 
-                resolved.Add(entry.fixedNpcPrefab);
+                spawn.prefab = entry.fixedNpcPrefab;
                 availablePool.Remove(entry.fixedNpcPrefab);
             }
             else
@@ -114,13 +124,58 @@ public class NPCSpawnManager : MonoBehaviour
                 }
 
                 int index = UnityEngine.Random.Range(0, availablePool.Count);
-                GameObject picked = availablePool[index];
-                resolved.Add(picked);
+                spawn.prefab = availablePool[index];
                 availablePool.RemoveAt(index);
             }
+
+            // Assign forced doppelganger profile if authored.
+            if (entry.forceDoppelganger && entry.fixedProfile != null)
+                spawn.doppelgangerProfile = entry.fixedProfile;
+
+            resolved.Add(spawn);
         }
 
+        // Phase 2: Assign random doppelganger profiles to non-forced entries.
+        AssignRandomDoppelgangers(resolved, config);
+
         return resolved;
+    }
+
+    private void AssignRandomDoppelgangers(List<SpawnEntry> resolved, RoundConfig config)
+    {
+        if (config.randomDoppelgangerCount <= 0 || config.doppelgangerPool == null || config.doppelgangerPool.Count == 0)
+            return;
+
+        // Collect indices of entries that don't already have a profile (non-forced).
+        List<int> candidateIndices = new List<int>();
+        for (int i = 0; i < resolved.Count; i++)
+        {
+            if (resolved[i].doppelgangerProfile == null)
+                candidateIndices.Add(i);
+        }
+
+        // Copy the profile pool so we can draw without replacement.
+        List<DoppelgangerProfile> availableProfiles = new List<DoppelgangerProfile>(config.doppelgangerPool);
+
+        int toAssign = Mathf.Min(config.randomDoppelgangerCount, candidateIndices.Count, availableProfiles.Count);
+
+        for (int i = 0; i < toAssign; i++)
+        {
+            // Pick a random candidate entry.
+            int candidateIdx = UnityEngine.Random.Range(0, candidateIndices.Count);
+            int entryIdx = candidateIndices[candidateIdx];
+            candidateIndices.RemoveAt(candidateIdx);
+
+            // Pick a random profile.
+            int profileIdx = UnityEngine.Random.Range(0, availableProfiles.Count);
+            DoppelgangerProfile profile = availableProfiles[profileIdx];
+            availableProfiles.RemoveAt(profileIdx);
+
+            // Assign (struct copy-back).
+            SpawnEntry entry = resolved[entryIdx];
+            entry.doppelgangerProfile = profile;
+            resolved[entryIdx] = entry;
+        }
     }
 
     private IEnumerator SpawnCoroutine()
@@ -146,8 +201,8 @@ public class NPCSpawnManager : MonoBehaviour
 
     private void SpawnNextNPC()
     {
-        GameObject prefab = _spawnQueue.Dequeue();
-        GameObject npcObject = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
+        SpawnEntry spawn = _spawnQueue.Dequeue();
+        GameObject npcObject = Instantiate(spawn.prefab, spawnPoint.position, spawnPoint.rotation);
 
         // If the NPC prefab has a NetworkObject, register it with NGO so it replicates
         // to all clients. The prefab must be in NetworkManager → NetworkPrefabsList.
@@ -159,13 +214,18 @@ public class NPCSpawnManager : MonoBehaviour
 
         if (_activeNPC == null)
         {
-            Debug.LogError($"[NPCSpawnManager] Spawned prefab '{prefab.name}' has no NPCInteractionController.");
+            Debug.LogError($"[NPCSpawnManager] Spawned prefab '{spawn.prefab.name}' has no NPCInteractionController.");
             return;
         }
 
         // AssignSceneReferences only runs on the server — scene objects (counter slots,
         // exit point, etc.) are server-side refs used by the AI state machine.
         _activeNPC.AssignSceneReferences(counterSlots, exitPoint, idCardSlot, allowedShelfSlots);
+
+        // Assign doppelganger profile (server-only). Null = real patient.
+        if (spawn.doppelgangerProfile != null)
+            _activeNPC.AssignDoppelgangerProfile(spawn.doppelgangerProfile);
+
         OnNPCSpawned?.Invoke(_activeNPC);
     }
 

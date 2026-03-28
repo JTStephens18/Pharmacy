@@ -79,6 +79,13 @@ public class NPCInteractionController : NetworkBehaviour
     [Tooltip("The counter slot where the ID card will be placed.")]
     [SerializeField] private IDCardSlot idCardSlot;
 
+    [Header("Prescription & Doppelganger")]
+    [Tooltip("Prescription data for this NPC. Displayed on the computer screen during verification.")]
+    [SerializeField] private PrescriptionData prescriptionData;
+
+    [Tooltip("Doppelganger profile. Null = real patient. Assigned at runtime by NPCSpawnManager.")]
+    [SerializeField] private DoppelgangerProfile doppelgangerProfile;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugGizmos = true;
     [SerializeField] private bool showDebugLogs = false;
@@ -1001,6 +1008,24 @@ public class NPCInteractionController : NetworkBehaviour
     /// The NPC identity data assigned to this NPC (read-only).
     /// </summary>
     public NPCIdentity NpcIdentity => npcIdentity;
+
+    /// <summary>Prescription data for this NPC (may be null for NPCs without prescriptions).</summary>
+    public PrescriptionData Prescription => prescriptionData;
+
+    /// <summary>True if this NPC is a doppelganger (has a DoppelgangerProfile assigned).</summary>
+    public bool IsDoppelganger => doppelgangerProfile != null;
+
+    /// <summary>The doppelganger profile, or null for real patients. Server-only ground truth.</summary>
+    public DoppelgangerProfile DoppelgangerData => doppelgangerProfile;
+
+    /// <summary>
+    /// Assigns a doppelganger profile at runtime. Called by NPCSpawnManager (server-only).
+    /// Pass null to leave as a real patient.
+    /// </summary>
+    public void AssignDoppelgangerProfile(DoppelgangerProfile profile)
+    {
+        doppelgangerProfile = profile;
+    }
 
     /// <summary>
     /// Assigns shared scene references that can't be saved on prefabs.

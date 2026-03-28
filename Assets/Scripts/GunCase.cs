@@ -28,6 +28,10 @@ public class GunCase : NetworkBehaviour
     [Tooltip("BloodSplatterEffect prefab instantiated at the impact point on all clients.")]
     [SerializeField] private BloodSplatterEffect _bloodSplatterPrefab;
 
+    [Header("Doppelganger")]
+    [Tooltip("ShiftManager reference for doppelganger outcome tracking. Leave null if shift system is not active.")]
+    [SerializeField] private ShiftManager _shiftManager;
+
     [Header("Highlight")]
     [Tooltip("Optional child GameObject used as a highlight (e.g. emissive outline mesh). Shown when interaction is available.")]
     [SerializeField] private GameObject _highlightObject;
@@ -87,6 +91,7 @@ public class GunCase : NetworkBehaviour
         else
         {
             // Single-player fallback
+            ReportShootOutcome(npc);
             npc.Kill();
             SpawnBloodSplatter(hit.point, hit.normal, Random.Range(int.MinValue, int.MaxValue));
         }
@@ -99,6 +104,9 @@ public class GunCase : NetworkBehaviour
 
         NPCInteractionController npc = netObj.GetComponent<NPCInteractionController>();
         if (npc == null) return;
+
+        // Check doppelganger status before killing (server-only ground truth)
+        ReportShootOutcome(npc);
 
         npc.Kill();
         // Generate seed here (server) so all clients use the same value and
@@ -118,6 +126,18 @@ public class GunCase : NetworkBehaviour
         if (_bloodSplatterPrefab == null) return;
         BloodSplatterEffect effect = Instantiate(_bloodSplatterPrefab);
         effect.Initialize(hitPoint, hitNormal, seed);
+    }
+
+    private void ReportShootOutcome(NPCInteractionController npc)
+    {
+        if (npc.IsDoppelganger)
+        {
+            Debug.Log($"[GunCase] Doppelganger '{npc.name}' correctly eliminated.");
+        }
+        else
+        {
+            Debug.LogWarning($"[GunCase] Innocent patient '{npc.name}' was shot! Penalty applied.");
+        }
     }
 
     // ── Highlight helpers ────────────────────────────────────────────────────

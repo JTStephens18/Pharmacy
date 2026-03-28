@@ -30,8 +30,11 @@ Assets/Scripts/
 ├── CashRegister.cs            # Checkout trigger
 ├── ComputerScreen.cs          # Computer focus + UI activation
 ├── ComputerScreenController.cs# View/tab manager for computer UI
-├── NPCInfoDisplay.cs          # Singleton: shows/hides NPC info panel on scan
-├── NPCIdentityField.cs        # Component: binds a TMP text to one NPCIdentity field
+├── NPCInfoDisplay.cs          # Singleton: shows/hides NPC info panel on scan + bridges to PrescriptionDisplay
+├── NPCIdentityField.cs        # Component: binds a TMP text to one NPCIdentity field (supports doppelganger overrides)
+├── PrescriptionDisplay.cs     # Singleton: shows/hides prescription panel on scan (doppelganger-aware)
+├── PrescriptionField.cs       # Component: binds a TMP text to one PrescriptionData field
+├── NPISearchPanel.cs          # NPI lookup panel for computer screen prescriber database view
 │
 ├── Counter/
 │   ├── CounterSlot.cs         # NPC item placement + player "bagging"
@@ -48,7 +51,10 @@ Assets/Scripts/
 │   ├── InteractableItem.cs    # Shelf item that NPCs pick up
 │   ├── ItemCategory.cs        # ScriptableObject: item type + prefab
 │   ├── NPCIdentity.cs         # ScriptableObject: NPC personal data for ID card
-│   ├── RoundConfig.cs         # ScriptableObject: NPC queue config per round
+│   ├── PrescriptionData.cs    # ScriptableObject: medication, dosage, prescriber info
+│   ├── DoppelgangerProfile.cs # ScriptableObject: fake data overrides + discrepancy types
+│   ├── PrescriberDatabase.cs  # ScriptableObject: valid prescriber NPI lookup table
+│   ├── RoundConfig.cs         # ScriptableObject: NPC queue config per round + doppelganger assignment
 │   ├── NPCSpawnManager.cs     # Sequential NPC spawner from RoundConfig queue
 │   ├── NPCInteractionController.cs  # NPC state machine (13 states)
 │   └── NPCAnimationController.cs    # Drives Animator from NPC state
@@ -701,6 +707,175 @@ These fields should be **left empty** on the prefab (injected by spawner at runt
 
 ---
 
+## System 14: Doppelganger System
+
+The core gameplay mechanic. Some NPCs are doppelgangers with discrepancies in their profile. The player investigates via the computer screen, then physically acts: cash register = approve, gun = reject. No approve/reject buttons exist on the computer — it is information-only.
+
+### PrescriptionData.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → Prescription Data**.
+
+| Field | Purpose |
+|---|---|
+| `medicationName` | Name of the prescribed medication |
+| `quantity` | Number of units prescribed |
+| `dosage` | Dosage instructions (e.g. "0.5mg twice daily") |
+| `prescriberName` | Prescribing doctor's full name |
+| `prescriberNPI` | National Provider Identifier number |
+| `prescriberSpecialty` | Medical specialty (e.g. "Cardiology") |
+| `prescriberAddress` | Prescriber's office address |
+| `previousFills` | Array of fill history strings (empty for new prescriptions) |
+
+### DoppelgangerProfile.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → Doppelganger Profile**.
+
+Defines what's fake about a doppelganger. Each fake field overrides the corresponding real value from `NPCIdentity` or `PrescriptionData` when presented to the player. Null/empty fields fall back to the real data.
+
+| Field | Purpose |
+|---|---|
+| `discrepancies` | `DiscrepancyType[]` — which fields are wrong (for scoring/hints) |
+| `fakePhoto` | Mismatched photo (Sprite) |
+| `fakeDOB` | Wrong date of birth |
+| `fakeAddress` | Wrong address |
+| `fakePrescriberNPI` | Invalid or wrong NPI |
+| `fakePrescriberSpecialty` | Wrong prescriber specialty |
+| `fakeDosage` | Suspicious dosage |
+| `fakeQuantity` | Non-standard quantity (0 = use real) |
+
+**`DiscrepancyType` enum**: `PhotoMismatch`, `InvalidNPI`, `NoFillHistory`, `WrongPrescriberSpecialty`, `DoseJump`, `NonStandardQuantity`, `PrescriberOutsideArea`, `WrongDOB`, `WrongAddress`
+
+**Convenience methods**: `GetDOB(real)`, `GetAddress(real)`, `GetPhoto(real)`, `GetPrescriberNPI(real)`, `GetPrescriberSpecialty(real)`, `GetDosage(real)`, `GetQuantity(real)` — each returns the fake value if overridden, otherwise the real value. `HasOverride(DiscrepancyType)` checks if a specific discrepancy is present.
+
+### PrescriberDatabase.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → Prescriber Database**.
+
+Contains a list of `PrescriberEntry` records (name, NPI, specialty, address). Used by the computer screen's NPI lookup feature. Builds an internal dictionary on first lookup for O(1) access.
+
+| Method | Purpose |
+|---|---|
+| `LookupByNPI(string npi)` | Returns the `PrescriberEntry` or null if NPI not found |
+| `IsValidNPI(string npi)` | Returns true if the NPI exists in the database |
+
+### NPCInteractionController — Doppelganger Fields
+
+| Field / Property | Purpose |
+|---|---|
+| `prescriptionData` (serialized) | Prescription data for this NPC. Set on prefab |
+| `doppelgangerProfile` (serialized) | Doppelganger profile. Null = real patient. Assigned at runtime by `NPCSpawnManager` |
+| `IsDoppelganger` (property) | `true` if `doppelgangerProfile != null` |
+| `DoppelgangerData` (property) | The doppelganger profile (server-only ground truth) |
+| `Prescription` (property) | The prescription data |
+| `AssignDoppelgangerProfile(profile)` | Called by `NPCSpawnManager` at spawn time (server-only) |
+
+### RoundConfig — Doppelganger Extensions
+
+**QueueEntry additions**:
+
+| Field | Purpose |
+|---|---|
+| `forceDoppelganger` | If true, this queue position is always a doppelganger |
+| `fixedProfile` | Specific `DoppelgangerProfile` for authored doppelgangers |
+
+**RoundConfig additions**:
+
+| Field | Purpose |
+|---|---|
+| `doppelgangerPool` | `List<DoppelgangerProfile>` — profiles available for random assignment |
+| `randomDoppelgangerCount` | How many random doppelgangers to assign (in addition to forced ones) |
+
+### NPCSpawnManager — Doppelganger Resolution
+
+The spawn queue now stores `SpawnEntry` structs (prefab + optional `DoppelgangerProfile`) instead of raw `GameObject` prefabs.
+
+**Resolution flow** (server-only, in `ResolveQueue`):
+1. Resolve NPC prefabs as before (fixed or random from pool)
+2. Apply forced doppelganger profiles from `QueueEntry.fixedProfile`
+3. `AssignRandomDoppelgangers()` — picks N random entries that don't already have profiles, assigns random profiles from `doppelgangerPool` (without replacement)
+4. On spawn: calls `AssignDoppelgangerProfile(profile)` on the NPC (null for real patients)
+
+### Prescription Verification UI
+
+The computer screen displays prescription and prescriber data alongside identity info. All populated automatically via component discovery (same pattern as `NPCIdentityField`).
+
+#### PrescriptionField.cs
+Same pattern as `NPCIdentityField`. Add to any `TextMeshProUGUI` inside a prescription panel.
+
+| FieldType | Source |
+|---|---|
+| `MedicationName` | `PrescriptionData.medicationName` |
+| `Quantity` | `PrescriptionData.quantity` (doppelganger override via `fakeQuantity`) |
+| `Dosage` | `PrescriptionData.dosage` (doppelganger override via `fakeDosage`) |
+| `PrescriberName` | `PrescriptionData.prescriberName` |
+| `PrescriberNPI` | `PrescriptionData.prescriberNPI` (doppelganger override via `fakePrescriberNPI`) |
+| `PrescriberSpecialty` | `PrescriptionData.prescriberSpecialty` (doppelganger override via `fakePrescriberSpecialty`) |
+| `PrescriberAddress` | `PrescriptionData.prescriberAddress` |
+| `FillHistory` | `PrescriptionData.previousFills` (doppelganger `NoFillHistory` overrides to "No previous fills") |
+
+Has two `Populate()` overloads: one for real data, one that accepts a `DoppelgangerProfile` to apply fake overrides.
+
+#### PrescriptionDisplay.cs (Singleton)
+Attach to `InteractiveUI` alongside `NPCInfoDisplay`. Manages the prescription panel.
+
+| Method | Purpose |
+|---|---|
+| `ShowPrescription(NPCInteractionController)` | Populates prescription fields with doppelganger overrides applied |
+| `ClearPrescription()` | Clears and hides the prescription panel |
+
+Called automatically by `NPCInfoDisplay.ShowNPCInfo()` — no manual bridging needed.
+
+#### NPISearchPanel.cs
+Attach to a panel inside a "Prescriber Database" computer screen view.
+
+| Field | Purpose |
+|---|---|
+| `database` | `PrescriberDatabase` ScriptableObject reference |
+| `npiInputField` | `TMP_InputField` for the NPI query |
+| `searchButton` | Button to trigger search (Enter key also works) |
+| `resultsPanel` | Panel showing result fields (name, specialty, address, NPI) |
+| `statusText` | "Not found" / validation messages |
+
+`PerformSearch()` calls `database.LookupByNPI()`. Shows prescriber details if found, "not found" if invalid.
+
+#### NPCInfoDisplay — Doppelganger Awareness
+
+`ShowNPCInfo(identity)` now:
+1. Finds the `NPCInteractionController` matching the identity via `FindNPCByIdentity()`
+2. Passes the `DoppelgangerProfile` to `NPCIdentityField.Populate(identity, profile)` — fake DOB/address shown
+3. Uses `profile.GetPhoto()` for the photo image — fake photo shown if overridden
+4. Bridges to `PrescriptionDisplay.ShowPrescription(npc)` automatically
+
+`ClearNPCInfo()` also calls `PrescriptionDisplay.ClearPrescription()`.
+
+New property: `CurrentNPC` — the NPC controller for the currently displayed NPC.
+
+#### NPCIdentityField — Doppelganger Support
+
+New overload: `Populate(NPCIdentity identity, DoppelgangerProfile profile)`. Applies fake DOB and fake address from the profile. FullName and IDNumber are never overridden (doppelgangers use the same name/ID as the real person).
+
+### Decision Flow & Outcome Hooks
+
+- **Approve** = cash register checkout (`CashRegister`). If doppelganger → escapes silently → `ShiftManager.ReportEscape()`
+- **Reject** = shoot with gun (`GunCase`). If doppelganger → caught. If real → money penalty
+- **Computer** = information-only. No action buttons. Player reads data and physically acts
+
+**CashRegister** — new `shiftManager` serialized field. In `ProcessCheckoutServerRpc()`, checks `npc.IsDoppelganger` before triggering checkout. If true, calls `shiftManager.ReportEscape()`.
+
+**GunCase** — new `_shiftManager` serialized field. In `ShootNPCServerRpc()`, calls `ReportShootOutcome(npc)` before `npc.Kill()`. Logs whether the kill was correct (doppelganger) or wrong (innocent).
+
+### Doppelganger Editor Setup Checklist
+
+- [ ] Create `PrescriptionData` assets (Right-click → Create → NPC → Prescription Data) for each NPC
+- [ ] Create `DoppelgangerProfile` assets (Right-click → Create → NPC → Doppelganger Profile) — set discrepancies + fake fields
+- [ ] Create one `PrescriberDatabase` asset (Right-click → Create → NPC → Prescriber Database) — add all valid prescriber entries
+- [ ] On each NPC prefab: assign `prescriptionData` in `NPCInteractionController`. Leave `doppelgangerProfile` empty (injected at runtime)
+- [ ] On `RoundConfig` asset: fill `doppelgangerPool` with profiles, set `randomDoppelgangerCount`. Optionally set `forceDoppelganger` + `fixedProfile` on specific queue entries
+- [ ] Add `PrescriptionDisplay` component to `InteractiveUI` → assign `prescriptionPanel`
+- [ ] Inside `prescriptionPanel`: add TMP text elements with `PrescriptionField` components, set `FieldType` on each
+- [ ] Add a "Prescriber Database" view in `ComputerScreenController` with `NPISearchPanel` → assign `database`, `npiInputField`, `searchButton`, result texts
+- [ ] On `CashRegister`: assign `shiftManager` reference
+- [ ] On `GunCase`: assign `_shiftManager` reference
+
+---
+
 ## Cross-System Dependencies
 
 ```
@@ -948,7 +1123,10 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 |---|---|---|
 | `ItemCategory` | Create → NPC → Item Category | Defines item type with prefab and rotation offset |
 | `NPCIdentity` | Create → NPC → NPC Identity | Defines NPC personal data (name, DOB, address, ID#, photo) + optional ID card overrides (card name, card photo) |
-| `RoundConfig` | Create → NPC → Round Config | Defines NPC queue per round: pool of prefabs + ordered queue entries (fixed or random) |
+| `PrescriptionData` | Create → NPC → Prescription Data | Medication name, quantity, dosage, prescriber info, fill history |
+| `DoppelgangerProfile` | Create → NPC → Doppelganger Profile | Discrepancy types + fake field overrides for doppelganger NPCs |
+| `PrescriberDatabase` | Create → NPC → Prescriber Database | List of valid prescriber entries for NPI lookup on computer screen |
+| `RoundConfig` | Create → NPC → Round Config | NPC queue per round: pool + queue entries (fixed/random) + doppelganger pool + random doppelganger count |
 
 ---
 

@@ -9,6 +9,13 @@ public class QueueEntry
 
     [Tooltip("The specific NPC prefab to spawn at this queue position (only used when Is Fixed is true).")]
     public GameObject fixedNpcPrefab;
+
+    [Header("Doppelganger")]
+    [Tooltip("If true, this queue position is always a doppelganger (authored set piece).")]
+    public bool forceDoppelganger;
+
+    [Tooltip("Specific doppelganger profile for authored doppelgangers. Only used when Force Doppelganger is true.")]
+    public DoppelgangerProfile fixedProfile;
 }
 
 [CreateAssetMenu(fileName = "NewRoundConfig", menuName = "NPC/Round Config")]
@@ -21,4 +28,12 @@ public class RoundConfig : ScriptableObject
     [Header("Queue")]
     [Tooltip("Ordered list of queue positions. Each entry is either a fixed NPC or a random pick from the pool.")]
     public List<QueueEntry> queueEntries = new List<QueueEntry>();
+
+    [Header("Doppelganger Settings")]
+    [Tooltip("Pool of doppelganger profiles available for random assignment to non-forced queue entries.")]
+    public List<DoppelgangerProfile> doppelgangerPool = new List<DoppelgangerProfile>();
+
+    [Tooltip("Number of random doppelgangers to assign (in addition to any forced ones). " +
+             "Set to 0 to only use forced doppelgangers.")]
+    public int randomDoppelgangerCount = 1;
 }

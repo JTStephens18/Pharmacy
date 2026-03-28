@@ -14,6 +14,10 @@ public class CashRegister : NetworkBehaviour
     [Tooltip("Radius to check for NPCs at the counter.")]
     [SerializeField] private float npcDetectionRadius = 5f;
 
+    [Header("Doppelganger")]
+    [Tooltip("ShiftManager reference for reporting doppelganger escapes. Leave null if shift system is not active.")]
+    [SerializeField] private ShiftManager shiftManager;
+
     /// <summary>
     /// Called by ObjectPickup when the player interacts with this cash register.
     /// Routes to the server so NPC state changes are authoritative.
@@ -65,6 +69,19 @@ public class CashRegister : NetworkBehaviour
         if (bestCandidate != null)
         {
             Debug.Log($"[CashRegister] Processing checkout for NPC: {bestCandidate.name}");
+
+            // Check doppelganger status before triggering checkout (server-only ground truth)
+            if (bestCandidate.IsDoppelganger)
+            {
+                Debug.LogWarning($"[CashRegister] Doppelganger '{bestCandidate.name}' escaped! Approved by player.");
+                if (shiftManager != null)
+                    shiftManager.ReportEscape();
+            }
+            else
+            {
+                Debug.Log($"[CashRegister] Real patient '{bestCandidate.name}' correctly approved.");
+            }
+
             bestCandidate.TriggerCheckout();
         }
         else

@@ -18,5 +18,12 @@ MonoBehaviour:
   queueEntries:
   - isFixed: 0
     fixedNpcPrefab: {fileID: 0}
+    forceDoppelganger: 0
+    fixedProfile: {fileID: 0}
   - isFixed: 0
     fixedNpcPrefab: {fileID: 0}
+    forceDoppelganger: 0
+    fixedProfile: {fileID: 0}
+  doppelgangerPool:
+  - {fileID: 11400000, guid: 723a77fbcad09a147881c40e099f55cc, type: 2}
+  randomDoppelgangerCount: 1

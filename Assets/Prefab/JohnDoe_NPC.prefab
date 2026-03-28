@@ -47,7 +47,7 @@ GameObject:
   - component: {fileID: 8144623574084119766}
   - component: {fileID: -3599253935488458621}
   m_Layer: 0
-  m_Name: NPC (1)
+  m_Name: JohnDoe_NPC
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -151,6 +151,8 @@ MonoBehaviour:
   npcIdentity: {fileID: 11400000, guid: 0c5f99c932f626f4ab0eca681521dfd9, type: 2}
   idCardPrefab: {fileID: 8928634346842528863, guid: 378822085598091418cc0d990d012cbd, type: 3}
   idCardSlot: {fileID: 0}
+  prescriptionData: {fileID: 11400000, guid: 0babe43d740ba784983bcbd706f6f824, type: 2}
+  doppelgangerProfile: {fileID: 0}
   showDebugGizmos: 1
   showDebugLogs: 0
 --- !u!114 &8674249807480568401
@@ -182,6 +184,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30aaf5bec952d7f46b66d4106e486641, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   dialogueFiles:
   - {fileID: 4900000, guid: a69facab811d40e48b240d51537cfa9d, type: 3}
   infoDialogues: []

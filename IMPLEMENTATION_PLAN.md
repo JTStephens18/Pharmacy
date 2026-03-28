@@ -206,7 +206,7 @@ This integrates directly with the existing `NPCDialogueTrigger.StartInfoDialogue
 
 **What the design doc says:** Pull up patient record on the computer. Cross-reference physical script with database: photo ID, DOB, address, prescriber NPI, fill history, dose consistency.
 
-**What exists:** `ComputerScreenController` supports tabbed views. `NPCInfoDisplay` shows basic NPC identity (name, DOB, address, photo). `NPCIdentityField` auto-populates TMP elements.
+**What exists:** `ComputerScreenController` supports tabbed views. `NPCInfoDisplay` shows basic NPC identity (name, DOB, address, photo). `NPCIdentityField` auto-populates TMP elements. 
 
 **Key design point:** The computer is an **information-only tool**. There are no approve/reject buttons. The player reads the data, forms a judgment, then physically acts on it — either ringing the customer up at the cash register (approve) or shooting them with the gun (reject).
 

@@ -10,6 +10,9 @@ using UnityEngine.UI;
 /// TextMeshProUGUI inside npcInfoPanel, set its FieldType, and it will be found at runtime.
 /// No manual TMP wiring needed.
 ///
+/// When the scanned NPC is a doppelganger, fake data overrides (DOB, address, photo) are
+/// applied automatically. Also bridges to PrescriptionDisplay if one exists in the scene.
+///
 /// Usage:
 ///   NPCInfoDisplay.Instance.ShowNPCInfo(npcIdentity);  // After barcode scan
 ///   NPCInfoDisplay.Instance.ClearNPCInfo();             // When NPC exits
@@ -29,6 +32,7 @@ public class NPCInfoDisplay : MonoBehaviour
 
     // ── Runtime State ───────────────────────────────────────────────
     private NPCIdentity _currentIdentity;
+    private NPCInteractionController _currentNPC;
     private bool _isDisplaying;
 
     /// <summary>Whether NPC info is currently being displayed.</summary>
@@ -36,6 +40,9 @@ public class NPCInfoDisplay : MonoBehaviour
 
     /// <summary>The currently displayed NPC identity (null if none).</summary>
     public NPCIdentity CurrentIdentity => _currentIdentity;
+
+    /// <summary>The NPC controller for the currently displayed NPC (null if none).</summary>
+    public NPCInteractionController CurrentNPC => _currentNPC;
 
     void Awake()
     {
@@ -55,6 +62,7 @@ public class NPCInfoDisplay : MonoBehaviour
     /// <summary>
     /// Populates the NPC info fields and shows the info panel on the main view.
     /// Called by IDCardInteraction after a successful barcode scan.
+    /// Finds the matching NPC controller to apply doppelganger overrides and prescription data.
     /// </summary>
     public void ShowNPCInfo(NPCIdentity identity)
     {
@@ -67,19 +75,34 @@ public class NPCInfoDisplay : MonoBehaviour
         _currentIdentity = identity;
         _isDisplaying = true;
 
-        // Populate all NPCIdentityField components inside the panel automatically
+        // Find the NPC controller that owns this identity (for prescription + doppelganger data)
+        _currentNPC = FindNPCByIdentity(identity);
+        DoppelgangerProfile profile = _currentNPC?.DoppelgangerData;
+
+        // Populate all NPCIdentityField components inside the panel automatically.
+        // If a doppelganger profile exists, fake overrides are applied.
         if (npcInfoPanel != null)
         {
             foreach (NPCIdentityField field in npcInfoPanel.GetComponentsInChildren<NPCIdentityField>())
-                field.Populate(identity);
+                field.Populate(identity, profile);
+
+            // Also populate any PrescriptionField components inside the same panel.
+            // This allows prescription data to live alongside identity data in one panel.
+            PrescriptionData rx = _currentNPC?.Prescription;
+            if (rx != null)
+            {
+                foreach (PrescriptionField field in npcInfoPanel.GetComponentsInChildren<PrescriptionField>())
+                    field.Populate(rx, profile);
+            }
         }
 
-        // Set photo
+        // Set photo — doppelganger may have a fake photo
+        Sprite displayPhoto = profile != null ? profile.GetPhoto(identity.photoSprite) : identity.photoSprite;
         if (photoImage != null)
         {
-            if (identity.photoSprite != null)
+            if (displayPhoto != null)
             {
-                photoImage.sprite = identity.photoSprite;
+                photoImage.sprite = displayPhoto;
                 photoImage.enabled = true;
             }
             else
@@ -92,7 +115,12 @@ public class NPCInfoDisplay : MonoBehaviour
         if (npcInfoPanel != null)
             npcInfoPanel.SetActive(true);
 
-        Debug.Log($"[NPCInfoDisplay] Showing info for '{identity.fullName}' on main view.");
+        // Bridge to PrescriptionDisplay if a separate prescription panel exists
+        if (_currentNPC != null && PrescriptionDisplay.Instance != null)
+            PrescriptionDisplay.Instance.ShowPrescription(_currentNPC);
+
+        Debug.Log($"[NPCInfoDisplay] Showing info for '{identity.fullName}'" +
+                  (profile != null ? " (doppelganger)" : "") + " on main view.");
     }
 
     /// <summary>
@@ -104,12 +132,15 @@ public class NPCInfoDisplay : MonoBehaviour
         if (!_isDisplaying) return;
 
         _currentIdentity = null;
+        _currentNPC = null;
         _isDisplaying = false;
 
-        // Clear all NPCIdentityField components inside the panel
+        // Clear all identity and prescription field components inside the panel
         if (npcInfoPanel != null)
         {
             foreach (NPCIdentityField field in npcInfoPanel.GetComponentsInChildren<NPCIdentityField>())
+                field.Clear();
+            foreach (PrescriptionField field in npcInfoPanel.GetComponentsInChildren<PrescriptionField>())
                 field.Clear();
         }
 
@@ -121,6 +152,27 @@ public class NPCInfoDisplay : MonoBehaviour
         if (npcInfoPanel != null)
             npcInfoPanel.SetActive(false);
 
+        // Clear prescription display
+        if (PrescriptionDisplay.Instance != null)
+            PrescriptionDisplay.Instance.ClearPrescription();
+
         Debug.Log("[NPCInfoDisplay] Cleared NPC info, panel hidden.");
+    }
+
+    /// <summary>
+    /// Finds the active NPC controller that has the given identity.
+    /// Returns null if no matching NPC is found.
+    /// </summary>
+    private NPCInteractionController FindNPCByIdentity(NPCIdentity identity)
+    {
+        if (identity == null) return null;
+
+        foreach (var npc in FindObjectsByType<NPCInteractionController>(FindObjectsSortMode.None))
+        {
+            if (npc.NpcIdentity == identity)
+                return npc;
+        }
+
+        return null;
     }
 }
