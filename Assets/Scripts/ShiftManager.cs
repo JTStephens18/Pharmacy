@@ -48,6 +48,9 @@ public class ShiftManager : NetworkBehaviour
     [Tooltip("The RoundConfig to use for the first day shift. Future nights may generate configs dynamically.")]
     [SerializeField] private RoundConfig defaultRoundConfig;
 
+    [Tooltip("Score manager for tracking shift outcomes. Optional — leave null if not using scoring.")]
+    [SerializeField] private ShiftScoreManager scoreManager;
+
     [Header("Timing")]
     [Tooltip("Seconds to wait in Dawn phase before starting the next day shift.")]
     [SerializeField] private float dawnDuration = 5f;
@@ -165,6 +168,8 @@ public class ShiftManager : NetworkBehaviour
         StopPhaseCoroutine();
 
         EscapedDoppelgangers.Value = 0;
+        if (scoreManager != null)
+            scoreManager.ResetForNewShift();
         SetPhase(ShiftPhase.DayShift);
 
         // Start NPC spawning with the current config.

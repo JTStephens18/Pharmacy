@@ -1585,6 +1585,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   npcDetectionRadius: 5
   shiftManager: {fileID: 1753595221}
+  scoreManager: {fileID: 1753595222}
 --- !u!65 &475044245
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -7297,6 +7298,7 @@ MonoBehaviour:
   _shootRange: 50
   _bloodSplatterPrefab: {fileID: 4254939683367423205, guid: 106d743819cca6148aec1e5a1c862cf7, type: 3}
   _shiftManager: {fileID: 1753595221}
+  _scoreManager: {fileID: 1753595222}
   _highlightObject: {fileID: 0}
 --- !u!65 &1726409059
 BoxCollider:
@@ -7430,6 +7432,7 @@ GameObject:
   - component: {fileID: 1753595219}
   - component: {fileID: 1753595218}
   - component: {fileID: 1753595221}
+  - component: {fileID: 1753595222}
   m_Layer: 0
   m_Name: GameStarter
   m_TagString: Untagged
@@ -7507,11 +7510,28 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   spawnManager: {fileID: 1344602566}
   defaultRoundConfig: {fileID: 11400000, guid: 7606911dc4f92a2409b140ec5f255ffb, type: 2}
+  scoreManager: {fileID: 1753595222}
   dawnDuration: 5
   transitionDuration: 4
   nightDuration: 120
   enableDebugTools: 1
   debugToggleKey: 282
+--- !u!114 &1753595222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1753595217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9181820878325643b2692c1c259c231, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  correctApprovalReward: 50
+  correctKillReward: 25
+  wrongKillPenalty: 100
 --- !u!1 &1755687585
 GameObject:
   m_ObjectHideFlags: 0
@@ -10115,6 +10135,7 @@ MonoBehaviour:
   dialogueKey: dob
   canvasGroup: {fileID: 0}
   unavailableAlpha: 0.4
+  questionsRemainingText: {fileID: 0}
 --- !u!1 &2121876804
 GameObject:
   m_ObjectHideFlags: 0

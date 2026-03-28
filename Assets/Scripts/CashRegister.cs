@@ -15,8 +15,11 @@ public class CashRegister : NetworkBehaviour
     [SerializeField] private float npcDetectionRadius = 5f;
 
     [Header("Doppelganger")]
-    [Tooltip("ShiftManager reference for reporting doppelganger escapes. Leave null if shift system is not active.")]
+    [Tooltip("ShiftManager reference for reporting doppelganger escapes.")]
     [SerializeField] private ShiftManager shiftManager;
+
+    [Tooltip("ShiftScoreManager reference for recording outcomes.")]
+    [SerializeField] private ShiftScoreManager scoreManager;
 
     /// <summary>
     /// Called by ObjectPickup when the player interacts with this cash register.
@@ -76,10 +79,14 @@ public class CashRegister : NetworkBehaviour
                 Debug.LogWarning($"[CashRegister] Doppelganger '{bestCandidate.name}' escaped! Approved by player.");
                 if (shiftManager != null)
                     shiftManager.ReportEscape();
+                if (scoreManager != null)
+                    scoreManager.RecordWrongApproval();
             }
             else
             {
                 Debug.Log($"[CashRegister] Real patient '{bestCandidate.name}' correctly approved.");
+                if (scoreManager != null)
+                    scoreManager.RecordCorrectApproval();
             }
 
             bestCandidate.TriggerCheckout();

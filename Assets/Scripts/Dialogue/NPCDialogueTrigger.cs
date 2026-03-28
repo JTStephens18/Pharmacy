@@ -48,6 +48,10 @@ public class NPCDialogueTrigger : NetworkBehaviour
     [Tooltip("Layer mask for line-of-sight check (should include obstacles, not the player).")]
     [SerializeField] private LayerMask lineOfSightMask = ~0;
 
+    [Header("Question Budget")]
+    [Tooltip("Maximum number of info questions players can ask this NPC before it gets impatient. Shared across all players.")]
+    [SerializeField] private int maxQuestions = 5;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
 
@@ -62,6 +66,11 @@ public class NPCDialogueTrigger : NetworkBehaviour
     private NetworkVariable<bool> _initialDialogueCompleted = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    // How many info questions remain. Decremented server-side when any player asks a question.
+    // Readable by all clients for UI (NPCInfoTalkButton shows remaining count).
+    private NetworkVariable<int> _questionsRemaining = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     // ── Dialogue request types for RPC communication ─────────────────
     private const byte REQUEST_AUTO = 0;
     private const byte REQUEST_NEW_CONVERSATION = 1;
@@ -72,6 +81,7 @@ public class NPCDialogueTrigger : NetworkBehaviour
     private bool _hasTriggeredInitialDialogue; // local fallback for non-networked
     private int _dialogueIndex;
     private bool _dialogueInProgress;
+    private int _localQuestionsRemaining; // non-networked fallback
 
     // Pre-loaded dialogue data for current file
     private DialogueData _loadedData;
@@ -105,6 +115,7 @@ public class NPCDialogueTrigger : NetworkBehaviour
     void Awake()
     {
         _npcController = GetComponent<NPCInteractionController>();
+        _localQuestionsRemaining = maxQuestions;
 
         // Build lookup from serialized array
         _infoDialogueLookup = new Dictionary<string, TextAsset>();
@@ -116,6 +127,13 @@ public class NPCDialogueTrigger : NetworkBehaviour
                 _infoDialogueLookup[entry.key] = entry.dialogueFile;
             }
         }
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (IsServer)
+            _questionsRemaining.Value = maxQuestions;
     }
 
     void OnDestroy()
@@ -206,7 +224,16 @@ public class NPCDialogueTrigger : NetworkBehaviour
         }
         else
         {
-            // Non-networked fallback
+            // Non-networked fallback — decrement budget locally
+            if (_localQuestionsRemaining <= 0)
+            {
+                Debug.LogWarning("[NPCDialogueTrigger] Question budget exhausted.");
+                return;
+            }
+            _localQuestionsRemaining--;
+            if (_localQuestionsRemaining <= 0)
+                OnBudgetExhausted?.Invoke();
+
             DoStartInfoDialogue(key);
         }
     }
@@ -239,6 +266,17 @@ public class NPCDialogueTrigger : NetworkBehaviour
     /// </summary>
     public bool IsDialogueInProgress => _dialogueInProgress;
 
+    /// <summary>
+    /// How many info questions remain for this NPC. Shared across all players.
+    /// </summary>
+    public int QuestionsRemaining => IsSpawned ? _questionsRemaining.Value : _localQuestionsRemaining;
+
+    /// <summary>Maximum questions this NPC allows (inspector value).</summary>
+    public int MaxQuestions => maxQuestions;
+
+    /// <summary>Fired when the question budget hits 0.</summary>
+    public event Action OnBudgetExhausted;
+
     // ── Network RPCs ─────────────────────────────────────────────────
 
     /// <summary>
@@ -261,6 +299,21 @@ public class NPCDialogueTrigger : NetworkBehaviour
         {
             DebugLog($"[NPCDialogueTrigger] Auto-trigger denied for client {requesterId} — already completed by another player");
             return;
+        }
+
+        // For info requests, check and decrement the question budget
+        if (requestType == REQUEST_INFO)
+        {
+            if (_questionsRemaining.Value <= 0)
+            {
+                DebugLog($"[NPCDialogueTrigger] Info request denied for client {requesterId} — question budget exhausted");
+                return;
+            }
+            _questionsRemaining.Value--;
+            DebugLog($"[NPCDialogueTrigger] Question budget: {_questionsRemaining.Value} remaining");
+
+            if (_questionsRemaining.Value <= 0)
+                OnBudgetExhausted?.Invoke();
         }
 
         // Grant the lock

@@ -29,8 +29,11 @@ public class GunCase : NetworkBehaviour
     [SerializeField] private BloodSplatterEffect _bloodSplatterPrefab;
 
     [Header("Doppelganger")]
-    [Tooltip("ShiftManager reference for doppelganger outcome tracking. Leave null if shift system is not active.")]
+    [Tooltip("ShiftManager reference for doppelganger outcome tracking.")]
     [SerializeField] private ShiftManager _shiftManager;
+
+    [Tooltip("ShiftScoreManager reference for recording outcomes.")]
+    [SerializeField] private ShiftScoreManager _scoreManager;
 
     [Header("Highlight")]
     [Tooltip("Optional child GameObject used as a highlight (e.g. emissive outline mesh). Shown when interaction is available.")]
@@ -133,10 +136,14 @@ public class GunCase : NetworkBehaviour
         if (npc.IsDoppelganger)
         {
             Debug.Log($"[GunCase] Doppelganger '{npc.name}' correctly eliminated.");
+            if (_scoreManager != null)
+                _scoreManager.RecordCorrectKill();
         }
         else
         {
             Debug.LogWarning($"[GunCase] Innocent patient '{npc.name}' was shot! Penalty applied.");
+            if (_scoreManager != null)
+                _scoreManager.RecordWrongKill();
         }
     }
 

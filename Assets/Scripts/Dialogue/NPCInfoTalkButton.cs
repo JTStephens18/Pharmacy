@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,6 +6,9 @@ using UnityEngine.UI;
 /// Button inside the NPCInfoPanel that triggers dialogue with the displayed NPC.
 /// Orchestrates: exit computer focus → start dialogue → return to player camera.
 /// Replaces ComputerDialogueButton.
+///
+/// Also tracks the NPC's question budget. When the budget runs out, the button
+/// disables and the remaining-count text updates to reflect it.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class NPCInfoTalkButton : MonoBehaviour
@@ -20,6 +24,11 @@ public class NPCInfoTalkButton : MonoBehaviour
 
     [Tooltip("Alpha when button is unavailable.")]
     [SerializeField] private float unavailableAlpha = 0.4f;
+
+    [Header("Question Budget")]
+    [Tooltip("Optional TMP text to display remaining questions (e.g. '3 questions remaining'). " +
+             "Updated automatically by polling the NPC's NPCDialogueTrigger.QuestionsRemaining.")]
+    [SerializeField] private TextMeshProUGUI questionsRemainingText;
 
     // ── Runtime ─────────────────────────────────────────────────────
     private Button _button;
@@ -74,21 +83,43 @@ public class NPCInfoTalkButton : MonoBehaviour
 
     private void UpdateButtonState()
     {
-        bool available = FindMatchingTrigger() != null;
+        NPCDialogueTrigger trigger = FindMatchingTrigger(out int questionsLeft);
+        bool available = trigger != null && questionsLeft > 0;
 
         _button.interactable = available;
 
         if (canvasGroup != null)
             canvasGroup.alpha = available ? 1f : unavailableAlpha;
+
+        // Update the questions remaining text if assigned
+        if (questionsRemainingText != null)
+        {
+            if (trigger != null || questionsLeft >= 0)
+            {
+                if (questionsLeft <= 0)
+                    questionsRemainingText.text = "No questions remaining";
+                else if (questionsLeft == 1)
+                    questionsRemainingText.text = "1 question remaining";
+                else
+                    questionsRemainingText.text = $"{questionsLeft} questions remaining";
+            }
+            else
+            {
+                questionsRemainingText.text = "";
+            }
+        }
     }
 
     /// <summary>
     /// Finds an NPCDialogueTrigger whose identity matches the one currently
     /// displayed on the NPCInfoPanel, is available for dialogue, and has
     /// a dialogue registered for this button's dialogueKey.
+    /// Also outputs the questions remaining for the matched NPC (-1 if no match).
     /// </summary>
-    private NPCDialogueTrigger FindMatchingTrigger()
+    private NPCDialogueTrigger FindMatchingTrigger(out int questionsRemaining)
     {
+        questionsRemaining = -1;
+
         if (NPCInfoDisplay.Instance == null || !NPCInfoDisplay.Instance.IsDisplaying)
             return null;
 
@@ -99,12 +130,16 @@ public class NPCInfoTalkButton : MonoBehaviour
         NPCDialogueTrigger[] triggers = FindObjectsByType<NPCDialogueTrigger>(FindObjectsSortMode.None);
         foreach (NPCDialogueTrigger trigger in triggers)
         {
-            if (!trigger.IsAvailableForDialogue())
+            NPCInteractionController ctrl = trigger.GetComponent<NPCInteractionController>();
+            if (ctrl == null || ctrl.NpcIdentity != displayedIdentity || !trigger.HasInfoDialogue(dialogueKey))
                 continue;
 
-            NPCInteractionController ctrl = trigger.GetComponent<NPCInteractionController>();
-            if (ctrl != null && ctrl.NpcIdentity == displayedIdentity && trigger.HasInfoDialogue(dialogueKey))
-                return trigger;
+            questionsRemaining = trigger.QuestionsRemaining;
+
+            if (!trigger.IsAvailableForDialogue())
+                return null; // NPC matched but not available — still report budget
+
+            return trigger;
         }
 
         return null;
@@ -117,8 +152,8 @@ public class NPCInfoTalkButton : MonoBehaviour
         if (_isOrchestrating) return;
         if (_computerScreen == null) return;
 
-        NPCDialogueTrigger trigger = FindMatchingTrigger();
-        if (trigger == null) return;
+        NPCDialogueTrigger trigger = FindMatchingTrigger(out int questionsLeft);
+        if (trigger == null || questionsLeft <= 0) return;
 
         DialogueManager dm = PlayerComponents.Local?.Dialogue;
         if (dm == null) return;

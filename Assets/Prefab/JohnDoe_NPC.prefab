@@ -152,7 +152,7 @@ MonoBehaviour:
   idCardPrefab: {fileID: 8928634346842528863, guid: 378822085598091418cc0d990d012cbd, type: 3}
   idCardSlot: {fileID: 0}
   prescriptionData: {fileID: 11400000, guid: 0babe43d740ba784983bcbd706f6f824, type: 2}
-  doppelgangerProfile: {fileID: 0}
+  doppelgangerProfile: {fileID: 11400000, guid: 723a77fbcad09a147881c40e099f55cc, type: 2}
   showDebugGizmos: 1
   showDebugLogs: 0
 --- !u!114 &8674249807480568401
@@ -193,6 +193,7 @@ MonoBehaviour:
   lineOfSightMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  maxQuestions: 5
   showDebugLogs: 0
 --- !u!114 &-3599253935488458621
 MonoBehaviour:

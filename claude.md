@@ -26,6 +26,7 @@ Assets/Scripts/
 ├── HoldableItem.cs            # Per-item hold offset overrides
 ├── FrameRateManager.cs        # Static 60 FPS initializer
 ├── ShiftManager.cs            # Server-authoritative day/night cycle state machine
+├── ShiftScoreManager.cs       # Server-authoritative shift score tracking (money, kills, escapes)
 ├── GameStarter.cs             # Routes to ShiftManager.StartDayShift() (or legacy NPCSpawnManager fallback)
 ├── CashRegister.cs            # Checkout trigger
 ├── ComputerScreen.cs          # Computer focus + UI activation
@@ -859,7 +860,50 @@ New overload: `Populate(NPCIdentity identity, DoppelgangerProfile profile)`. App
 
 **CashRegister** — new `shiftManager` serialized field. In `ProcessCheckoutServerRpc()`, checks `npc.IsDoppelganger` before triggering checkout. If true, calls `shiftManager.ReportEscape()`.
 
-**GunCase** — new `_shiftManager` serialized field. In `ShootNPCServerRpc()`, calls `ReportShootOutcome(npc)` before `npc.Kill()`. Logs whether the kill was correct (doppelganger) or wrong (innocent).
+**GunCase** — new `_shiftManager` and `_scoreManager` serialized fields. In `ShootNPCServerRpc()`, calls `ReportShootOutcome(npc)` before `npc.Kill()`. Records correct kill or wrong kill via `ShiftScoreManager`.
+
+### ShiftScoreManager.cs
+
+`NetworkBehaviour` on the same persistent scene GameObject as `ShiftManager`. All values are `NetworkVariable<int>` (server-auth, everyone-read).
+
+| NetworkVariable | Purpose |
+|---|---|
+| `Money` | Running total (persists across shifts) |
+| `CustomersServed` | Real patients correctly approved this shift |
+| `DoppelgangersCaught` | Doppelgangers correctly shot this shift |
+| `DoppelgangersEscaped` | Doppelgangers that slipped through this shift |
+| `InnocentsKilled` | Real patients incorrectly shot this shift |
+
+| Method | Called By | Effect |
+|---|---|---|
+| `RecordCorrectApproval()` | `CashRegister` (real patient approved) | Money += 50, CustomersServed++ |
+| `RecordWrongApproval()` | `CashRegister` (doppelganger approved) | DoppelgangersEscaped++ |
+| `RecordCorrectKill()` | `GunCase` (doppelganger shot) | Money += 25, DoppelgangersCaught++ |
+| `RecordWrongKill()` | `GunCase` (innocent shot) | Money -= 100, InnocentsKilled++ |
+| `ResetForNewShift()` | `ShiftManager.StartDayShift()` | Resets per-shift counters (Money carries over) |
+
+Reward/penalty amounts are configurable in the Inspector.
+
+**Event**: `OnScoreChanged(ShiftScoreManager)` — fired after any score change. Subscribe from HUD scripts.
+
+### Question Budget
+
+`NPCDialogueTrigger` tracks a server-authoritative `NetworkVariable<int> _questionsRemaining` (initialized from `maxQuestions`, default 5). Decremented on the server each time any player asks an info question. When budget hits 0:
+
+- Server refuses further `REQUEST_INFO` lock requests
+- `OnBudgetExhausted` event fires (server-side)
+- `NPCInfoTalkButton` disables itself and updates the remaining count text
+
+| Property | Purpose |
+|---|---|
+| `QuestionsRemaining` | Current remaining questions (reads NetworkVariable when spawned, local fallback otherwise) |
+| `MaxQuestions` | Inspector-configured max (default 5) |
+| `OnBudgetExhausted` | Event fired when budget reaches 0 |
+
+**NPCInfoTalkButton** additions:
+- New `questionsRemainingText` field (`TextMeshProUGUI`) — displays "X questions remaining" or "No questions remaining"
+- `UpdateButtonState()` now checks `QuestionsRemaining > 0` in addition to existing availability checks
+- Button disables when budget is exhausted even if the NPC is otherwise available
 
 ### Doppelganger Editor Setup Checklist
 
@@ -868,11 +912,15 @@ New overload: `Populate(NPCIdentity identity, DoppelgangerProfile profile)`. App
 - [ ] Create one `PrescriberDatabase` asset (Right-click → Create → NPC → Prescriber Database) — add all valid prescriber entries
 - [ ] On each NPC prefab: assign `prescriptionData` in `NPCInteractionController`. Leave `doppelgangerProfile` empty (injected at runtime)
 - [ ] On `RoundConfig` asset: fill `doppelgangerPool` with profiles, set `randomDoppelgangerCount`. Optionally set `forceDoppelganger` + `fixedProfile` on specific queue entries
-- [ ] Add `PrescriptionDisplay` component to `InteractiveUI` → assign `prescriptionPanel`
-- [ ] Inside `prescriptionPanel`: add TMP text elements with `PrescriptionField` components, set `FieldType` on each
+- [ ] Add `PrescriptionField` components to TMP text elements inside the existing `npcInfoPanel` (alongside `NPCIdentityField` components) — set `FieldType` on each. No separate panel needed
+- [ ] Optionally add `PrescriptionDisplay` component to `InteractiveUI` if you want a separate prescription panel
 - [ ] Add a "Prescriber Database" view in `ComputerScreenController` with `NPISearchPanel` → assign `database`, `npiInputField`, `searchButton`, result texts
-- [ ] On `CashRegister`: assign `shiftManager` reference
-- [ ] On `GunCase`: assign `_shiftManager` reference
+- [ ] Create a persistent scene GameObject with `ShiftScoreManager` + `NetworkObject` (or add to the existing ShiftManager object)
+- [ ] On `ShiftManager`: assign `scoreManager` reference
+- [ ] On `CashRegister`: assign `shiftManager` and `scoreManager` references
+- [ ] On `GunCase`: assign `_shiftManager` and `_scoreManager` references
+- [ ] On `NPCInfoTalkButton`s: optionally assign `questionsRemainingText` (TMP text element)
+- [ ] On NPC prefabs: `maxQuestions` on `NPCDialogueTrigger` defaults to 5, adjust per NPC if desired
 
 ---
 
