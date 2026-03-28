@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep:*)",
-      "Bash(grep -r \"interior\\\\|Room\\\\|Delivery\\\\|Counter\\\\|Shelf\\\\|Office\" Assets/Scenes --include=*.unity)"
+      "Bash(grep -r \"interior\\\\|Room\\\\|Delivery\\\\|Counter\\\\|Shelf\\\\|Office\" Assets/Scenes --include=*.unity)",
+      "Bash(find /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets/Prefabs -type f -name *.prefab)",
+      "Bash(find /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets -name *.prefab)",
+      "Bash(grep -i \"\\\\.cs$\")",
+      "Bash(wc -l /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets/Scripts/*.cs)"
     ]
   }
 }
