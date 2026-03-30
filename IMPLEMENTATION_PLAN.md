@@ -582,9 +582,7 @@ The physical elimination flow is already built. The missing pieces are:
    - True → `ShiftManager.ReportEscape()` + `ShiftScoreManager.RecordWrongApproval()` (doppelganger escapes)
    - False → `ShiftScoreManager.RecordCorrectApproval()` (real patient served)
 
-3. **Spawn gating** — `NPCSpawnManager` checks `BloodDecal.Active.Count == 0` on the server before spawning the next NPC. Forces cleanup between customers.
-
-4. **Optional: body disposal** — After shooting, the NPC ragdolls (or a body prefab remains). Player must drag/carry it to a disposal point (e.g. dumpster behind the delivery room). This adds a physical cost to killing and prevents the pharmacy from looking like a crime scene. Lower priority — can ship without this.
+3. **Optional: body disposal** — After shooting, the NPC ragdolls (or a body prefab remains). Player must drag/carry it to a disposal point (e.g. dumpster behind the delivery room). This adds a physical cost to killing and prevents the pharmacy from looking like a crime scene. Lower priority — can ship without this. Alternatively, the NPC drops a large body parts the player must put in a garbage bag and dispose of. 
 
 **Multiplayer notes:**
 - All existing. `ShootNPCServerRpc` and `ProcessCheckoutServerRpc` already run on the server. Adding a doppelganger check is a few lines of server-side logic.
