@@ -26,10 +26,7 @@ public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
     [Tooltip("Alpha when button is unavailable.")]
     [SerializeField] private float unavailableAlpha = 0.4f;
 
-    [Header("Hover Outline")]
-    [Tooltip("Outline UI effect on the Button's Image. Enabled on hover, disabled otherwise. " +
-             "Add an Outline component to the Button's Image and assign it here, or leave null to auto-find.")]
-    [SerializeField] private Outline hoverOutline;
+
 
     [Header("Question Budget")]
     [Tooltip("Optional TMP text to display remaining questions (e.g. '3 questions remaining'). " +
@@ -38,6 +35,7 @@ public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
 
     // ── Runtime ─────────────────────────────────────────────────────
     private Button _button;
+    private Image _buttonImage;
     private ComputerScreen _computerScreen;
     private bool _isOrchestrating;
     private float _scanTimer;
@@ -49,10 +47,11 @@ public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
         _button = GetComponent<Button>();
         _button.onClick.AddListener(OnButtonClicked);
 
-        if (hoverOutline == null)
-            hoverOutline = GetComponent<Outline>();
-        if (hoverOutline != null)
-            hoverOutline.enabled = false;
+        _buttonImage = GetComponent<Image>();
+        if (_buttonImage != null)
+            _buttonImage.enabled = false;
+        else
+            Debug.LogWarning($"[NPCInfoTalkButton] ({gameObject.name}) No Image component found — hover effect will not work.");
     }
 
     void Start()
@@ -102,9 +101,9 @@ public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
         if (canvasGroup != null)
             canvasGroup.alpha = available ? 1f : unavailableAlpha;
 
-        // Hide outline if button becomes unavailable while hovered
-        if (!available && hoverOutline != null)
-            hoverOutline.enabled = false;
+        // Hide image if button becomes unavailable while hovered
+        if (!available && _buttonImage != null)
+            _buttonImage.enabled = false;
 
         // Update the questions remaining text if assigned
         if (questionsRemainingText != null)
@@ -212,17 +211,17 @@ public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
         _isOrchestrating = false;
     }
 
-    // ── Hover Outline ────────────────────────────────────────────────
+    // ── Hover Image ──────────────────────────────────────────────────
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (hoverOutline != null && _button.interactable)
-            hoverOutline.enabled = true;
+        if (_button.interactable && _buttonImage != null)
+            _buttonImage.enabled = true;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (hoverOutline != null)
-            hoverOutline.enabled = false;
+        if (_buttonImage != null)
+            _buttonImage.enabled = false;
     }
 }
