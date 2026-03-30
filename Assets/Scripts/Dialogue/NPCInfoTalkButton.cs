@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -11,7 +12,7 @@ using UnityEngine.UI;
 /// disables and the remaining-count text updates to reflect it.
 /// </summary>
 [RequireComponent(typeof(Button))]
-public class NPCInfoTalkButton : MonoBehaviour
+public class NPCInfoTalkButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Dialogue")]
     [Tooltip("Key that maps to an InfoDialogueEntry on the NPC's NPCDialogueTrigger. " +
@@ -24,6 +25,11 @@ public class NPCInfoTalkButton : MonoBehaviour
 
     [Tooltip("Alpha when button is unavailable.")]
     [SerializeField] private float unavailableAlpha = 0.4f;
+
+    [Header("Hover Outline")]
+    [Tooltip("Outline UI effect on the Button's Image. Enabled on hover, disabled otherwise. " +
+             "Add an Outline component to the Button's Image and assign it here, or leave null to auto-find.")]
+    [SerializeField] private Outline hoverOutline;
 
     [Header("Question Budget")]
     [Tooltip("Optional TMP text to display remaining questions (e.g. '3 questions remaining'). " +
@@ -42,6 +48,11 @@ public class NPCInfoTalkButton : MonoBehaviour
     {
         _button = GetComponent<Button>();
         _button.onClick.AddListener(OnButtonClicked);
+
+        if (hoverOutline == null)
+            hoverOutline = GetComponent<Outline>();
+        if (hoverOutline != null)
+            hoverOutline.enabled = false;
     }
 
     void Start()
@@ -90,6 +101,10 @@ public class NPCInfoTalkButton : MonoBehaviour
 
         if (canvasGroup != null)
             canvasGroup.alpha = available ? 1f : unavailableAlpha;
+
+        // Hide outline if button becomes unavailable while hovered
+        if (!available && hoverOutline != null)
+            hoverOutline.enabled = false;
 
         // Update the questions remaining text if assigned
         if (questionsRemainingText != null)
@@ -195,5 +210,19 @@ public class NPCInfoTalkButton : MonoBehaviour
             _computerScreen.Deactivate();
 
         _isOrchestrating = false;
+    }
+
+    // ── Hover Outline ────────────────────────────────────────────────
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (hoverOutline != null && _button.interactable)
+            hoverOutline.enabled = true;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (hoverOutline != null)
+            hoverOutline.enabled = false;
     }
 }
