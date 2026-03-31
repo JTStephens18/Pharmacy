@@ -1,5 +1,5 @@
-# Pharmacy Horror Game — Design Document
-*Working title: After Hours*
+# After Hours
+*Pharmacy Horror Game — Design Document*
 
 ---
 
@@ -41,6 +41,30 @@ Shift ends
 ```
 
 **Key timing note:** The recipe note is posted and readable during the day shift — before any monster appears. The player can find and memorize it while going about normal work. Its presence during the day is the only hint that something is coming.
+
+---
+
+## Narrative
+
+### The Predecessor
+
+The pharmacy has been here since at least the early 1970s. The previous pharmacist ran it for nearly two decades — long enough that the regulars knew her schedule, her habits, and the particular way she kept things. She was meticulous. The records she left behind are dense and careful. Long-term patients have years of fill history in the system, logged with a consistency that suggests she paid attention.
+
+She stopped coming in on a Tuesday. No notice. No forwarding address. The register was balanced, the shelves were stocked, the open sign was still on. The pharmacy sat closed for several months before the ownership transferred. The official explanation, if asked, is a family matter. No one followed up.
+
+The recipe notes are hers. Their tone — clinical, bureaucratic, dry — matches the handwriting visible elsewhere in the building: margin notes on old delivery logs, a second set of observations tucked behind the dispensary cabinet, a list of dates with no names on the back of a pinboard card. She was tracking something for a long time before she was gone. The notes she left are the distilled result of that work. She wrote them to be legible to whoever came next, because she knew she might not be there to explain.
+
+What happened to her is not answered by the game directly. The regulars remember her. The pharmacy still carries her shape. Whether she left, was taken, or became something else is a question the player can sit with or ignore.
+
+### How the Story Surfaces
+
+The predecessor is never named, never shown, and never explained. Her presence is felt through three sources:
+
+- **The physical space** — margin notes, a second ledger behind the dispensary cabinet, the recipe notes themselves. These are findable, not mandatory.
+- **A small number of long-term regulars** who mention her offhand. These lines are written as social texture, not clues. A player not looking for a story will hear them as small talk.
+- **The recipe notes**, which grow slightly more worn-looking across nights, as if some were written recently and some were not.
+
+No more than three NPCs carry any trace of her. The lines are short, unprompted, and not repeated. The player who notices will notice. The player who doesn't will have a complete experience regardless.
 
 ---
 
@@ -138,6 +162,8 @@ The recipe note is posted somewhere visible in the pharmacy at the start of each
 **Note tone:** Written as dry internal protocol — clinical, bureaucratic, slightly wrong. Not a horror document. The uncanniness comes from the fact that someone prepared for this in advance and left instructions without explanation.
 
 > *"Night Protocol 3 — Compound as directed. Do not deviate."*
+
+The notes are in the same handwriting throughout the game. They predate the player's arrival. Who wrote them, and when, is not explained.
 
 ### Ingredient System
 
@@ -318,11 +344,14 @@ No roles are locked — players coordinate naturally based on situation.
 
 ## Open Design Questions
 
-- [x] ~~Should rejected doppelgangers leave silently, react visibly, or give the player a brief window to eliminate them before they escape?~~ **Resolved: There is no "reject" button. The player shoots suspected doppelgangers with the gun.**
-- [x] ~~What does doppelganger elimination look like physically — shooting, a dedicated action, or counter-based interaction?~~ **Resolved: Shooting. The gun is the rejection mechanism.**
 - [ ] Does the monster have a visible tell before it attacks, or is contact with it an immediate consequence?
 - [ ] Does the player have a health / strike system, or is any monster contact a full fail state?
-- [ ] Should there be an in-world explanation for the recipe notes — who left them and why?
 - [ ] How does the quota / money system work — what does failing to meet it cost the player across shifts?
 - [ ] NPC cast design: names, conditions, prescriptions, doppelganger variants, authored night appearances
 - [ ] Should the monster leave any environmental hint during the day — a shadow, a sound, a wrong reflection?
+- [ ] How much of the predecessor's history should be recoverable — is there an ending that depends on what the player finds?
+- [ ] Does completing a successful run (zero doppelgangers escaped) ever surface a different kind of night — one where the monster appears anyway?
+
+**Resolved:**
+- [x] There is no approve/reject button. The player shoots suspected doppelgangers with the gun.
+- [x] Should there be an in-world explanation for the recipe notes — who left them and why. **Resolved:** The notes were left by the previous pharmacist. Their origin is implied, not stated. No in-world explanation is given directly.

@@ -44,6 +44,8 @@ public class ObjectPickup : NetworkBehaviour
     private IDCardInteraction _currentIDCard;
     private Door _currentDoor;
     private GunCase _currentGunCase;
+    private PillFillingStation _currentFillingStation;
+    private HopperLoadButton _currentLoadButton;
 
     // ── Networked hold state ────────────────────────────────────────
     // When the held object is a NetworkObject we can't SetParent to the camera
@@ -77,6 +79,8 @@ public class ObjectPickup : NetworkBehaviour
         DetectIDCard();
         DetectDoor();
         DetectGunCase();
+        DetectFillingStation();
+        DetectLoadButton();
 
         if (Input.GetKeyDown(interactKey))
         {
@@ -96,6 +100,11 @@ public class ObjectPickup : NetworkBehaviour
                 else if (_currentSortingStation != null && !_currentSortingStation.IsActive)
                 {
                     _currentSortingStation.Activate();
+                }
+                // Check for pill filling station
+                else if (_currentFillingStation != null && !_currentFillingStation.IsActive)
+                {
+                    _currentFillingStation.Activate();
                 }
                 // Check for ID card on counter (focus + barcode scan)
                 else if (_currentIDCard != null && !_currentIDCard.IsActive)
@@ -138,6 +147,11 @@ public class ObjectPickup : NetworkBehaviour
                     }
                     TryPickup();
                 }
+            }
+            // Check for hopper load button (holding medication bottle near filling station)
+            else if (_currentLoadButton != null)
+            {
+                _currentLoadButton.TryLoad(_heldObject, this);
             }
             // Check if we're in box-to-shelf placement mode
             else if (_playerComponents != null && _playerComponents.PlacementManager != null && _playerComponents.PlacementManager.IsPlacementReady())
@@ -981,5 +995,92 @@ public class ObjectPickup : NetworkBehaviour
     public bool IsHoldingInventoryBox()
     {
         return _heldObject != null && _heldObject.GetComponent<InventoryBox>() != null;
+    }
+
+    // ── Pill Filling Station Detection ──────────────────────────────
+
+    private void DetectFillingStation()
+    {
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+        PillFillingStation newStation = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+        {
+            newStation = hit.collider.GetComponent<PillFillingStation>();
+            if (newStation == null)
+                newStation = hit.collider.GetComponentInParent<PillFillingStation>();
+        }
+
+        _currentFillingStation = newStation;
+    }
+
+    private void DetectLoadButton()
+    {
+        HopperLoadButton newButton = null;
+
+        if (_heldObject != null)
+        {
+            Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
+
+            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
+            {
+                newButton = hit.collider.GetComponent<HopperLoadButton>();
+                if (newButton == null)
+                    newButton = hit.collider.GetComponentInParent<HopperLoadButton>();
+            }
+        }
+
+        // Handle highlight changes
+        if (newButton != _currentLoadButton)
+        {
+            if (_currentLoadButton != null) _currentLoadButton.ShowHighlight(false);
+            if (newButton != null) newButton.ShowHighlight(true);
+        }
+
+        _currentLoadButton = newButton;
+    }
+
+    // ── Consume Held Object ─────────────────────────────────────────
+
+    /// <summary>
+    /// Destroys the currently held object and clears hold state.
+    /// Used by HopperLoadButton when medication is poured into the hopper.
+    /// For NetworkObjects, despawns via the server.
+    /// </summary>
+    public void ConsumeHeldObject()
+    {
+        if (_heldObject == null) return;
+
+        GameObject obj = _heldObject;
+
+        // Unparent first (local objects are parented to camera)
+        if (_heldNetworkObject == null)
+            obj.transform.SetParent(null);
+
+        // Clear hold state
+        _heldObject = null;
+        _heldRigidbody = null;
+        _heldCollider = null;
+        _isHoldingInventoryBox = false;
+
+        // Destroy or despawn
+        if (_heldNetworkObject != null)
+        {
+            ulong netId = _heldNetworkObject.NetworkObjectId;
+            _heldNetworkObject = null;
+            ConsumeNetworkObjectServerRpc(netId);
+        }
+        else
+        {
+            Destroy(obj);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeNetworkObjectServerRpc(ulong networkObjectId)
+    {
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+            netObj.Despawn(true);
     }
 }

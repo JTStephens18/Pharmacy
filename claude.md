@@ -68,6 +68,15 @@ Assets/Scripts/
 │   ├── PillCountingChute.cs   # Trigger zone that counts pills
 │   └── PillCountUI.cs         # World-space count display
 │
+├── PillFilling/
+│   ├── MedicationData.cs      # ScriptableObject: medication type + pill color
+│   ├── MedicationBottle.cs    # Component: identifies carried medication bottle
+│   ├── PillFillingStation.cs  # Station lifecycle manager (focus mode, NetworkBehaviour)
+│   ├── RotatingHopper.cs      # Hopper rotation, speed randomization, alignment window
+│   ├── DispensingController.cs# Gate input, cosine flow rate, pill accumulation
+│   ├── FillCounterUI.cs       # World-space count display (current / target)
+│   └── HopperLoadButton.cs    # Load medication into hopper from held bottle
+│
 ├── Shelf/
 │   ├── ShelfSection.cs        # IPlaceable shelf with multiple slots
 │   ├── ShelfSlot.cs           # Individual slot with multi-item support
@@ -458,6 +467,135 @@ Mouse-controlled kinematic Rigidbody that pushes pills across the tray.
 
 ### PillCountUI.cs
 World-space UI showing `"Count: X / Y"`. Subscribes to chute events. Shows completion state with color change and optional confirm button.
+
+---
+
+## System 10a: Pill Filling Station
+
+### Overview
+
+The dispensing half of the prescription workflow. The player loads medication into a rotating hopper, then holds a gate open to dispense pills into a bottle. Flow rate follows a cosine curve across a fixed alignment window — dead center = maximum flow, edges taper to zero.
+
+### MedicationData.cs (ScriptableObject)
+Create via **Right-click → Create → NPC → Medication Data**.
+
+| Field | Purpose |
+|---|---|
+| `medicationName` | Display name (e.g. "Lisinopril 10mg") |
+| `pillColor` | Pill color used by hopper gate window visual |
+
+### MedicationBottle.cs
+Attach to medication bottle prefabs (must also have `Rigidbody` for pickup).
+
+| Field | Purpose |
+|---|---|
+| `medicationData` | Reference to the `MedicationData` ScriptableObject |
+
+### PillFillingStation.cs (NetworkBehaviour)
+Attach to the filling station root GameObject.
+
+**Activation flow** (E press → `Activate()`):
+1. Acquires exclusive-access lock (same pattern as `PillCountingStation`)
+2. `FocusStateManager.EnterFocus()` — transitions camera
+3. Reads target count from `NPCInfoDisplay.Instance.CurrentNPC.Prescription.quantity`
+4. Initializes `DispensingController` with target count
+5. Activates `RotatingHopper` and `FillCounterUI`
+
+**Deactivation** (Escape → focus exit → `Deactivate()`):
+1. Captures `LastFillCount` from `DispensingController`
+2. Shuts down dispensing + hopper, resets UI
+3. Releases server lock
+
+| Field | Purpose |
+|---|---|
+| `focusCameraTarget` | Camera position during focus |
+| `hopper` | `RotatingHopper` reference (auto-found in children) |
+| `dispensingController` | `DispensingController` reference (auto-found in children) |
+| `counterUI` | `FillCounterUI` reference (auto-found in children) |
+
+**Properties**: `IsActive`, `IsInUse`, `Hopper`, `LastFillCount`.
+
+### RotatingHopper.cs
+Attach to the hopper disk GameObject.
+
+Drives continuous rotation with speed randomization. The hopper spins only when active and loaded.
+
+| Feature | Details |
+|---|---|
+| Speed range | Configurable min/max (default 50–400 °/s) |
+| Speed changes | Timer-based (3–8s interval), smooth ramping |
+| Direction reversal | 20% chance on each speed change |
+| Alignment window | Fixed arc at `alignmentCenterAngle` ± `alignmentHalfWidth` (default 180° ± 15°) |
+
+**Key methods**:
+- `LoadMedication(MedicationData)` — sets loaded medication (called by `HopperLoadButton`)
+- `ClearMedication()` — clears loaded state
+- `Activate()` / `Deactivate()` — start/stop spinning
+- `IsSpoutInWindow(out float normalizedPosition)` — 0 = center, 1 = edge
+
+**Inspector fields**: `hopperTransform`, `rotationAxis`, speed range, change interval, `reverseChance`, alignment angles.
+
+### DispensingController.cs
+Attach alongside or as child of the station.
+
+Handles player input (hold left mouse to open gate), calculates flow rate from hopper position, and accumulates pill count.
+
+| Feature | Details |
+|---|---|
+| Gate input | Hold `Mouse0` (configurable) to open gate |
+| Flow rate | `maxFlowRate * cos(normalizedPos * π/2)` — 28 pills/sec at center, 0 at edge |
+| Pill accumulation | Float accumulator; each integer crossing = 1 pill dispensed |
+| No failure state | Over/underfilling produces no penalty during day shift |
+
+**Events**: `OnPillDispensed(int current, int target)`, `OnTargetReached`, `OnGateStateChanged(bool open)`.
+
+**Speed vs pills per centered pass** (with default 15° half-width):
+
+| Speed | Approx. pills per pass |
+|---|---|
+| Slow (~60 °/s) | 7–9 |
+| Medium (~120 °/s) | 4–5 |
+| Fast (~200 °/s) | 2–3 |
+| Very fast (~360 °/s) | 1–2 |
+
+### FillCounterUI.cs
+World-space UI. Subscribes to `DispensingController` events. Shows `"current / target"` (or just count if no target). Color-codes: white = normal, green = target reached, yellow = overfilled.
+
+### HopperLoadButton.cs
+Attach to a collider on the station housing (the physical load button).
+
+When the player presses E while holding a `MedicationBottle` and looking at this button:
+1. `TryLoad(heldObject, pickup)` — checks for `MedicationBottle` component
+2. Calls `hopper.LoadMedication(bottle.MedicationData)`
+3. Calls `pickup.ConsumeHeldObject()` — destroys/despawns the bottle
+4. Plays load sound
+
+The hopper holds one medication at a time. Loading a different bottle replaces the current load. Loading the wrong medication produces no error.
+
+### ObjectPickup Integration
+
+| Target | Detection | Action on E |
+|---|---|---|
+| `PillFillingStation` | `DetectFillingStation()` | Calls `station.Activate()` → enters focus (when not holding) |
+| `HopperLoadButton` | `DetectLoadButton()` | Calls `button.TryLoad()` → loads medication, consumes bottle (when holding) |
+
+**New method**: `ConsumeHeldObject()` — destroys the held object (or despawns via `ConsumeNetworkObjectServerRpc` for NetworkObjects). Clears all hold state.
+
+### Pill Filling Editor Setup Checklist
+
+- [ ] Create `MedicationData` assets (Right-click → Create → NPC → Medication Data) for each medication
+- [ ] Create medication bottle prefabs: `Rigidbody` + `MedicationBottle` (assign `medicationData`) + `Collider` + optional `HoldableItem`
+- [ ] Create the filling station hierarchy:
+  - **Root**: `PillFillingStation` component (+ `NetworkObject` for multiplayer)
+  - **Hopper child**: `RotatingHopper` component, assign `hopperTransform` to the rotating disk mesh
+  - **Dispensing child**: `DispensingController` component, assign `hopper` reference
+  - **UI child**: World-space Canvas with `FillCounterUI` + `TextMeshProUGUI`
+  - **Load button child**: Collider + `HopperLoadButton` component
+  - **Camera target**: Empty Transform positioned for top-down or angled view of the station
+- [ ] Assign `focusCameraTarget` on `PillFillingStation`
+- [ ] Ensure `PillFillingStation`, `RotatingHopper`, and `DispensingController` can auto-find each other (same hierarchy), or assign manually
+- [ ] For multiplayer: add `NetworkObject` to the station root, add to `DisconnectHandler` cleanup if needed
+- [ ] Medication bottles should be placed in a dispensary cabinet for the player to retrieve
 
 ---
 
@@ -931,6 +1069,15 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
      │                                      ↑
      ├──→ PillCountingStation ──────────────┘
      │                                      ↑
+     ├──→ PillFillingStation ───────────────┘
+     │         │
+     │         ├──→ RotatingHopper (rotation + alignment)
+     │         ├──→ DispensingController (gate + flow + counting)
+     │         └──→ FillCounterUI (count display)
+     │
+     ├──→ HopperLoadButton ──→ RotatingHopper.LoadMedication()
+     │         └──→ ObjectPickup.ConsumeHeldObject() (destroys bottle)
+     │                                      ↑
      ├──→ IDCardInteraction ────────────────┘
      │         │
      │         └──→ NPCInfoDisplay (shows panel in main view, no view switch)
@@ -975,6 +1122,8 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 2. **NPC Shopping**: `NPCSpawnManager` instantiates NPC prefab at `spawnPoint` → `AssignSceneReferences()` injects shared scene refs → `NPCInteractionController` scans `ShelfSlot[]` → navigates → picks up `InteractableItem` → navigates to counter → `CounterSlot.PlaceItem()` → waits → `CashRegister.TriggerCheckout()` → navigates to exit → fires `OnNPCExited` → destroys self → `NPCSpawnManager` spawns next NPC after delay
 
 3. **Pill Counting**: `ObjectPickup` detects `PillCountingStation` → `Activate()` → `FocusStateManager.EnterFocus()` → `PillSpawner.SpawnPills()` → player uses `PillScraper` → pills enter `PillCountingChute` → count reaches target → auto-exit
+
+3a. **Pill Filling**: Player carries `MedicationBottle` to station → presses E on `HopperLoadButton` → `TryLoad()` loads hopper + consumes bottle → player presses E on `PillFillingStation` (empty hands) → `Activate()` → `FocusStateManager.EnterFocus()` → `RotatingHopper.Activate()` → player holds left mouse to open gate → `DispensingController` calculates cosine flow → pills accumulate → `FillCounterUI` updates → Escape exits
 
 4. **Computer Screen**: `ObjectPickup` detects `ComputerScreen` → `Activate()` → `FocusStateManager.EnterFocus()` → `ComputerScreenController.ResetToMain()` → player clicks tabs/buttons on World Space Canvas → Escape exits
 
@@ -1175,6 +1324,7 @@ Scans for NPCs matching `NPCInfoDisplay.Instance.CurrentIdentity` and checks `Ha
 | `DoppelgangerProfile` | Create → NPC → Doppelganger Profile | Discrepancy types + fake field overrides for doppelganger NPCs |
 | `PrescriberDatabase` | Create → NPC → Prescriber Database | List of valid prescriber entries for NPI lookup on computer screen |
 | `RoundConfig` | Create → NPC → Round Config | NPC queue per round: pool + queue entries (fixed/random) + doppelganger pool + random doppelganger count |
+| `MedicationData` | Create → NPC → Medication Data | Medication type: name + pill color. Referenced by MedicationBottle, loaded into RotatingHopper |
 
 ---
 

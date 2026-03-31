@@ -49,6 +49,26 @@ Use these archetypes as a starting point, not a constraint:
 
 ---
 
+## Lore Integration
+
+### The Predecessor
+
+The pharmacy has a history that predates the player's arrival. The previous pharmacist ran the place for nearly two decades before disappearing without explanation. She left the building in order, the records dense and careful, and the recipe notes posted where whoever came next would find them.
+
+The player is never told this directly. It surfaces, if at all, through a small number of long-term regulars who knew her — Marlene, Carl, and Pat — and through one anonymous customer who appears once and is not explained.
+
+### Rules for Lore Dialogue
+
+- No more than three NPCs in the entire pool carry any reference to the predecessor.
+- Each reference appears at most once per NPC, unprompted, and is never repeated.
+- The lines are written as social texture — small talk, not clues. A player not looking for a story will hear them as mundane.
+- No NPC explains what happened, speculates about why she left, or treats her absence as strange. They simply remember her.
+- The anonymous one-off woman (NPC 12) is the only entry that crosses into the uncanny. She appears once and does not return.
+
+The goal is that a player paying close attention will feel the predecessor's absence as a texture across the playthrough — not as a mystery to solve, unless they choose to make it one.
+
+---
+
 ## Part 1 — Writing a Real NPC
 
 Real NPCs are human. They appear once and are never reused. Their prescription is legitimate. They have a memorable quirk. Some are doppelganger-eligible and have a fixed alternate version written alongside them.
@@ -74,6 +94,9 @@ QUIRK
 
 DOPPELGANGER-ELIGIBLE: [ Yes / No ]
   (If yes, complete Part 3 for this NPC)
+
+LORE LINE: [ None / Yes — state the line ]
+  (Used by at most 3 NPCs total. Short, unprompted, not repeated.)
 
 DESIGN NOTES:
   (Sensitive subject matter, false positive risk, authored night, etc.)
@@ -280,133 +303,6 @@ DESIGN NOTES:
 
 ---
 
-## Completed Examples
-
----
-
-### Example A — Real NPC (no doppelganger version)
-
-**NAME:** Derek Solis
-**AGE:** 29
-**CONTEXT:** Courier. Still in his uniform. Says he pulled a muscle on a delivery and stopped at the urgent care clinic around the corner.
-
-**PRESCRIPTION**
-- Drug and dose: Naproxen 500mg
-- Quantity: 20 tablets
-- Refills: 0
-- Prescriber: Dr. Reyes, urgent care clinic — NPI 5544332211
-- Prescriber specialty: General / urgent care
-- Condition: Acute muscle strain
-
-**QUIRK**
-- Primary: In a hurry but not rude about it. Asks if the pharmacy validates parking.
-- Shelf purchase: Nothing — he's on the clock.
-
-**DOPPELGANGER-ELIGIBLE:** No
-
-**DESIGN NOTES:** Derek is a clean, low-stakes NPC. No flags, no drama. His function is to fill out the shift with a believable one-off customer and give the player a fast, frictionless interaction between harder ones.
-
----
-
-### Example B — Real NPC (doppelganger-eligible)
-
-**NAME:** Pat Nguyen
-**AGE:** 61
-**CONTEXT:** Works at the dry cleaner two doors down. Comes in on her lunch break. Has been a customer here for years.
-
-**PRESCRIPTION**
-- Drug and dose: Atorvastatin 20mg
-- Quantity: 30 tablets
-- Refills: 5 remaining
-- Prescriber: Dr. Carol Vance, GP — NPI 1234567890
-- Prescriber specialty: General practice
-- Condition: High cholesterol, managed
-
-**QUIRK**
-- Primary: Always mentions something happening at the strip mall — new tenant moving in, a restaurant that closed, someone parked in the fire lane again. Low-key gossip.
-- Secondary: Always in a hurry, never rude about it.
-- Shelf purchase: A single bottle of water.
-
-**DOPPELGANGER-ELIGIBLE:** Yes
-
----
-
-**DOPPELGANGER VERSION OF: Pat Nguyen**
-
-**SWAPPED PRESCRIPTION DETAILS**
-- Prescriber changed to Dr. Alan Park — a different practice with no transfer note on file
-- Flag: Prescriber change without documented reason, different practice group
-
-**WHAT THE QUIRK GETS WRONG**
-- Missing: No mention of anything happening at the strip mall. Doesn't seem to know or care about the neighborhood.
-- Missing: Not in a hurry. Lingers slightly longer than necessary.
-
-**ADDITIONAL FLAGS:** None
-
-**FLAG DIFFICULTY:** Medium — prescriber change requires active cross-reference; behavioral tell requires the player to have seen real Pat at least once
-
-**AFTERMATH:** Standard mess.
-
-**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The behavioral tell only lands if the player has a baseline. If the doppelganger appears first, the prescriber flag alone is medium-difficulty — still catchable, just less satisfying.
-
----
-
-### Example C — Standalone Doppelganger
-
-**NAME:** Victor Crane
-**AGE:** 47
-**CONTEXT:** Claims to be in town for a job interview. Says his regular pharmacy is across the state.
-
-**FABRICATED PRESCRIPTION**
-- Drug and dose: Oxycodone HCl 10mg
-- Quantity: 60 tablets
-- Prescriber: Dr. Alan Park — NPI 9988776655
-- Prescriber specialty: NPI resolves to a retired physician — no longer in practice
-- Stated condition: Chronic back pain from an old work injury
-
-**FLAGS**
-- Hard flag 1: NPI resolves to a retired physician — no longer licensed to prescribe
-- Hard flag 2: Quantity 60 is double the standard 30-day supply for this drug class
-- Soft tell: Answers every question without hesitation. Too composed. Doesn't fidget, doesn't check his phone, doesn't look around. Sits completely still while waiting.
-- Total flag count: 2 hard + 1 soft
-- Flag difficulty: Medium — both hard flags require active checking, soft tell is atmospheric
-
-**BEHAVIOR:** Polite, unhurried, makes eye contact consistently. Has a rehearsed quality without being robotic. If asked about his back injury, gives a complete and plausible answer that somehow contains no personal detail.
-
-**AFTERMATH:** Blood, but the wrong color. Dark, almost black. Leaves a mark on the floor that doesn't come fully clean.
-
-**DESIGN NOTES:** Victor is a mid-pool standalone doppelganger suitable for nights 2–3. The blood color is a late-shift environmental detail that unsettles without explaining anything.
-
----
-
-### Example D — Authored NPC
-
-**NAME:** Karen Holt
-**NIGHT:** 1
-**QUEUE POSITION:** 2 (second customer of the shift)
-
-**FABRICATED PRESCRIPTION**
-- Drug and dose: Alprazolam 0.5mg
-- Quantity: 30 tablets
-- Prescriber: Dr. James Holt — the patient's stated husband
-- Prescriber specialty: GP
-
-**FLAGS**
-- Hard flag: A physician cannot legally prescribe controlled substances to an immediate family member — surfaced automatically by the computer without cross-referencing
-- Soft tell: None needed — flag is automatic and unambiguous
-- Total flag count: 1 hard (auto-surfaced)
-- Flag difficulty: Easy
-
-**BEHAVIOR:** Friendly and chatty. Volunteers the explanation before being asked — "James said it would be fine." Refers to the prescriber by first name. Seems mildly embarrassed but entirely reasonable. Nothing about her behavior is threatening.
-
-**AFTERMATH:** Standard mess. The next customer in queue watches it happen and says nothing.
-
-**NARRATIVE PURPOSE:** Teaches the player how the auto-flag system works on night 1. The flag is unambiguous so the decision is easy, but Karen's warmth makes the player feel slightly bad about it — establishing that correct decisions can still feel uncomfortable. The witness in line sets the tone for the rest of the game without a word of exposition.
-
-**DESIGN NOTES:** Must appear second in the queue on night 1. Early enough to function as a tutorial, late enough that the player has settled into one normal interaction first. Her friendliness is load-bearing — a hostile or suspicious first authored doppelganger would teach the player to look for hostility. Karen teaches them to look at the paperwork.
-
----
-
 ## Quick Reference Checklist
 
 Before submitting any NPC entry, confirm:
@@ -418,6 +314,7 @@ Before submitting any NPC entry, confirm:
 - [ ] Quantity follows standard norms
 - [ ] At least one quirk that is visible, consistent, and mundane
 - [ ] If doppelganger-eligible, Part 3 is completed
+- [ ] If carrying a lore line, it is short, unprompted, and does not repeat. Confirm total lore-carrying NPCs does not exceed 3.
 - [ ] Design notes flag any sensitive subject matter or false positive risk
 
 **Standalone Doppelganger**
@@ -440,7 +337,33 @@ Before submitting any NPC entry, confirm:
 
 ---
 
-## NPC Roster — Entries 02–11
+## NPC Roster — Entries 01–12
+
+---
+
+### NPC 01 — Derek Solis
+
+**NAME:** Derek Solis
+**AGE:** 29
+**CONTEXT:** Courier. Still in his uniform. Says he pulled a muscle on a delivery and stopped at the urgent care clinic around the corner.
+
+**PRESCRIPTION**
+- Drug and dose: Naproxen 500mg
+- Quantity: 20 tablets
+- Refills: 0
+- Prescriber: Dr. Reyes, urgent care clinic — NPI 5544332211
+- Prescriber specialty: General / urgent care
+- Condition: Acute muscle strain
+
+**QUIRK**
+- Primary: In a hurry but not rude about it. Asks if the pharmacy validates parking.
+- Shelf purchase: Nothing — he's on the clock.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**LORE LINE:** None
+
+**DESIGN NOTES:** Derek is a clean, low-stakes NPC. No flags, no drama. His function is to fill out the shift with a believable one-off customer and give the player a fast, frictionless interaction between harder ones.
 
 ---
 
@@ -464,7 +387,9 @@ Before submitting any NPC entry, confirm:
 
 **DOPPELGANGER-ELIGIBLE:** No
 
-**DESIGN NOTES:** Marlene is a low-stakes warmth anchor. She establishes the long-term customer archetype and the sense that this pharmacy has a history. Her question about whether you're new is not suspicious — it's social. She functions as a palate cleanser between harder NPCs. No false positive risk.
+**LORE LINE:** Yes. On her second or third appearance, after her usual comment about faces: *"The woman before you — she always remembered what I took. You'll get there."* Said warmly, without expectation. She does not elaborate and does not repeat it.
+
+**DESIGN NOTES:** Marlene is a low-stakes warmth anchor. Her lore line is genuinely kind — it reads as encouragement, not as a clue. A player not thinking about it will hear reassurance. A player paying attention will notice that there was someone here before them who left an impression on a 22-year regular. The line does not appear on her first visit — it needs the relationship to feel established first.
 
 ---
 
@@ -509,6 +434,8 @@ Before submitting any NPC entry, confirm:
 
 **DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The tell is specifically in the missing apology — a person impersonating Tommy knows about the grease (it's visible) but didn't rehearse the embarrassment.
 
+**LORE LINE:** None
+
 ---
 
 ### NPC 04 — Diane Yoo
@@ -531,11 +458,13 @@ Before submitting any NPC entry, confirm:
 
 **DOPPELGANGER-ELIGIBLE:** No
 
+**LORE LINE:** None
+
 **DESIGN NOTES:** Diane is a strip mall neighbor — she knows the layout, doesn't need to browse, and is only half-present. Her distraction is entirely mundane. False positive risk: a player unfamiliar with nail salon workers might read her as evasive. She is not. Her prescription and prescriber are fully appropriate (Endocrinology for hypothyroidism).
 
 ---
 
-### NPC 05 — Ray Colton
+### NPC 05 — Ray Colton *(Standalone Doppelganger)*
 
 **NAME:** Ray Colton
 **AGE:** 38
@@ -605,6 +534,8 @@ Before submitting any NPC entry, confirm:
 
 **DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The empty tote bag is the key visual tell — Sandra's bag is always in motion because she's always just come from somewhere. A flat bag means she packed it to look the part.
 
+**LORE LINE:** None
+
 ---
 
 ### NPC 07 — Theo Marsh
@@ -628,11 +559,13 @@ Before submitting any NPC entry, confirm:
 
 **DOPPELGANGER-ELIGIBLE:** No
 
+**LORE LINE:** None
+
 **DESIGN NOTES:** Theo is the anxious first-timer archetype. His questions are genuine and slightly exhausting. His prescription is completely standard — urgent care physician, correct drug and quantity, appropriate refill count (zero, because it's an acute infection). False positive risk: his anxiety might read as nervousness. It isn't. He's just unwell and underprepared for adulthood.
 
 ---
 
-### NPC 08 — Ellen Voss
+### NPC 08 — Ellen Voss *(Standalone Doppelganger)*
 
 **NAME:** Ellen Voss
 **AGE:** 55
@@ -675,7 +608,7 @@ Before submitting any NPC entry, confirm:
 - Condition: Atrial fibrillation, anticoagulation management
 
 **QUIRK**
-- Primary: Always comments on the weather, even when there's nothing to say. "Cold out today." "Nice enough, I suppose." A ritual more than a observation.
+- Primary: Always comments on the weather, even when there's nothing to say. "Cold out today." "Nice enough, I suppose." A ritual more than an observation.
 - Secondary: Briefly complains about how mail runs work now compared to when he did the route. Has a specific grievance each time — different grievance, same energy.
 - Shelf purchase: A newspaper or a TV Guide, whichever is closer to the door.
 
@@ -701,7 +634,13 @@ Before submitting any NPC entry, confirm:
 
 **AFTERMATH:** Standard.
 
-**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The missing fill history is the most subtle element and rewards players who understand what warfarin management looks like. Carl's doppelganger is the hardest of the doppelganger-eligible alternates in this batch — appropriate for later nights.
+**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. Carl's doppelganger is the hardest of the doppelganger-eligible alternates in this batch — appropriate for later nights.
+
+---
+
+**LORE LINE:** Yes. On his first or second visit, after paying, while picking up his newspaper: *"Glad someone's keeping the place."* He doesn't look up when he says it. It's not a compliment directed at the player specifically — it's closer to relief. He does not explain it and does not repeat it.
+
+**LORE DESIGN NOTES:** Carl's line is the most ambiguous of the three. It could read as a comment about the pharmacy closing and reopening — a mundane relief that the local pharmacy is still running. A player not looking for subtext will hear exactly that. The line lands differently after the player has found the pinboard note or the ledger, but it does not require that context to be believable.
 
 ---
 
@@ -725,11 +664,13 @@ Before submitting any NPC entry, confirm:
 
 **DOPPELGANGER-ELIGIBLE:** No
 
+**LORE LINE:** None
+
 **DESIGN NOTES:** Becca is a deliberate false positive bait. Her prescription (sertraline from a psychiatrist) is entirely appropriate — this is exactly what that drug class looks like on a legitimate prescription. Her impatience is occupational, not suspicious. The player who flags her because she seems "too confident" or because they're uncomfortable with the medication type has made an error. Design intent: teach the player to check the paperwork, not the affect.
 
 ---
 
-### NPC 11 — Frank Delaney
+### NPC 11 — Frank Delaney *(Authored, Night 1)*
 
 **NAME:** Frank Delaney
 **NIGHT:** 1
@@ -754,3 +695,27 @@ Before submitting any NPC entry, confirm:
 **NARRATIVE PURPOSE:** Frank is the second authored tutorial NPC on night 1 (Karen Holt being the first). Where Karen teaches that a warm demeanor is not verification, Frank teaches the corollary: credentials and a good explanation are also not verification. He is a doctor. He sounds right. The paperwork says no. His aftermath — the coat with no name — is the first image in the game that does not have an explanation, and is not meant to.
 
 **DESIGN NOTES:** Must appear in queue position 3 or 4 on night 1. Late enough that the player has processed Karen and one or two normal NPCs first. Frank's warmth must not feel like a trick — it is genuine. He believes his explanation. The game is not asking the player to decide if Frank is a bad person. It is asking them to read the flag on the screen and act accordingly. The nameless coat is a deliberate loose thread.
+
+---
+
+### NPC 12 — [No Name Given]
+
+**TYPE:** Real NPC — one-time appearance, no prescription
+**AGE:** Indeterminate. Somewhere between 40 and 60. Nothing about her appearance is memorable after the fact.
+**CONTEXT:** Buys a single item over the counter — a bottle of aspirin. Does not approach for a prescription. Has no prior record in the system.
+
+**QUIRK**
+
+She completes the transaction without incident. While the player is ringing her up, without prompting and without waiting for a response: *"Tell her I said hello, if she's still around."*
+
+She is out the door before the player can respond. If the player checks the computer for her name after she leaves, there is no record matching her description.
+
+**PRESCRIPTION:** None. OTC only.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**LORE LINE:** The line above is her entire function. It is the only uncanny lore moment in the NPC roster. Every other predecessor reference is mundane enough to be ignored. This one is not.
+
+**NIGHT:** Night 3 or later. Never on night 1 or 2. The player should have had enough time with Marlene and Carl that "her" has a referent that feels almost within reach.
+
+**DESIGN NOTES:** She is not a doppelganger. She is not explained. Her name is not in the system because it was never entered — she paid cash, gave no ID, bought aspirin. The line she delivers is the only moment in the game where the predecessor's existence becomes impossible to read as coincidence. Whether "if she's still around" is hopeful or uncertain is left entirely open. Do not follow up on her in any other NPC's dialogue. She appears once and is not referenced again.
