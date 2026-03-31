@@ -1,0 +1,84 @@
+{
+    "dialogueId": "npc_customer_09_info",
+    "speakerName": "Carl",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Scanning the card now, huh? You know, I've been coming here since before they put those readers in. Used to just give a name and they'd find you. Simpler times.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Times change. Just a couple of questions.",
+                    "nextNodeId": "questions"
+                },
+                {
+                    "text": "Your records go back a long way here.",
+                    "nextNodeId": "long_history"
+                },
+                {
+                    "text": "I want to ask about your prescription.",
+                    "nextNodeId": "rx_question"
+                }
+            ]
+        },
+        {
+            "id": "questions",
+            "text": "Fire away. Date of birth, address, all of it. I've got it memorized. Nothing better to do on a Tuesday.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Date of birth?",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Everything checks out. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "long_history",
+            "text": "Fifteen years this April. Dr. Ellison put me on the warfarin about seven years ago — the A-fib. I get the INR checked every few weeks, keep it steady. It's become a whole system.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That's exactly the kind of history I'd expect to see. Everything looks right.",
+                    "nextNodeId": "end_clear"
+                },
+                {
+                    "text": "Just need your date of birth to confirm.",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "rx_question",
+            "text": "Warfarin, five milligrams, Dr. Ruth Ellison. She's been with me since before the A-fib diagnosis. Good doctor. Thorough. Makes me come in more than I'd like but that's the deal.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Fill history looks continuous. That's what I'd expect for warfarin.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "July seventeenth, nineteen fifty-two. I've had the same birthday for seventy-one years and it hasn't surprised me yet.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're all set, Carl.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Good. I'll be over here with my paper. Cold enough out there you could still get snow. I'm usually right about these things.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

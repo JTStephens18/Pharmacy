@@ -1,0 +1,97 @@
+{
+    "dialogueId": "npc_customer_08_info",
+    "speakerName": "Ellen",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "You've scanned my identification. Is there something that needs clarifying?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I have a question about the prescriber.",
+                    "nextNodeId": "prescriber_q"
+                },
+                {
+                    "text": "I need to verify your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "I notice there's no prior fill history at any location.",
+                    "nextNodeId": "no_history"
+                }
+            ]
+        },
+        {
+            "id": "prescriber_q",
+            "text": "What would you like to know?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Dr. Manders' NPI lists him as a dentist.",
+                    "nextNodeId": "dentist_flag"
+                },
+                {
+                    "text": "Is this the first time you've seen this doctor?",
+                    "nextNodeId": "first_time"
+                }
+            ]
+        },
+        {
+            "id": "dentist_flag",
+            "text": "He does have a dental practice, yes. But he has treated my knee for several years. I suppose he operates in more than one capacity.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "A dentist isn't within scope to prescribe for chronic orthopedic pain.",
+                    "nextNodeId": "scope_response"
+                }
+            ]
+        },
+        {
+            "id": "scope_response",
+            "text": "I wasn't aware that was a concern. He has always been very thorough.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "first_time",
+            "text": "No, I've seen him many times. He knows my history very well.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "There's no fill history on file for this medication.",
+                    "nextNodeId": "no_history"
+                }
+            ]
+        },
+        {
+            "id": "no_history",
+            "text": "I've always used the chain pharmacy across town. They would have the records, not this location.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "We can request a transfer. That would take some time.",
+                    "nextNodeId": "end_holding"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "September fourteenth, nineteen sixty-eight.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. I still need to verify the prescriber information.",
+                    "nextNodeId": "prescriber_q"
+                }
+            ]
+        },
+        {
+            "id": "end_holding",
+            "text": "I understand. I'm happy to wait.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

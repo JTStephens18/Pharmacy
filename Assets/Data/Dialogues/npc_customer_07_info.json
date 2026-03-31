@@ -1,0 +1,54 @@
+{
+    "dialogueId": "npc_customer_07_info",
+    "speakerName": "Theo",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh — you scanned it? Is there something wrong with the prescription? Because the urgent care gave it to me like two hours ago, it should be fine.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Nothing's wrong. Just routine verification.",
+                    "nextNodeId": "routine"
+                },
+                {
+                    "text": "The prescription looks fine. I need your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "routine",
+            "text": "Oh, okay. Good. Sorry, I'm just — this is only the second time I've filled a prescription on my own. I know that's kind of embarrassing at twenty-three but my mom always handled the insurance stuff.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It's not embarrassing. Can you confirm your date of birth?",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "You're doing fine. Everything looks good here.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "November second, two thousand and one. I'm twenty-three. I keep waiting for it to feel like an adult age.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Thank you. Sorry for all the questions earlier. Occupational hazard of being anxious.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

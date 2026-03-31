@@ -1,0 +1,69 @@
+{
+    "dialogueId": "npc_customer_06_info",
+    "speakerName": "Sandra",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh, you scanned my card! Is something wrong? Because I genuinely cannot handle one more thing being wrong this week.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Nothing's wrong. Just verifying details.",
+                    "nextNodeId": "nothing_wrong"
+                },
+                {
+                    "text": "Routine check. Prescription question.",
+                    "nextNodeId": "rx_question"
+                }
+            ]
+        },
+        {
+            "id": "nothing_wrong",
+            "text": "Oh thank god. Okay. Sorry. It's been a week. Semester ends and everything falls apart at once. What do you need?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Everything checks out. You're good.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "rx_question",
+            "text": "The metformin. Five hundred milligrams, ninety tablets — I do the three-month supply because I can't remember a single month at a time. Dr. Ellison's my doctor. She's been very patient with me.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That all checks out. Just a date of birth verification.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Prescription looks fine.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "February ninth, nineteen seventy-nine. I'm turning forty-five in two months and I have feelings about it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Great. I'm gonna grab that ibuprofen before I lose my nerve. Thank you for not adding to my problems today.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

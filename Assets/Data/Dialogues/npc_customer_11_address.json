@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_11_address",
+    "speakerName": "Frank",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address. Seventeen Pembrook Drive. It's the house — I've been there twelve years. My practice is about six blocks away. I walk when the weather's good. Which is not today.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches the ID.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "Any change of address recently?",
+                    "nextNodeId": "moved"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "No. Twelve years, same house. My kids grew up there. It's documented as my address with the medical board, the hospital, the practice — everything. Seventeen Pembrook Drive.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Thank you. I hope you'll reconsider. I've explained the situation as clearly as I can.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

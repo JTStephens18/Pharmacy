@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_02_address",
+    "speakerName": "Marlene",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "My address? Four twelve Birchwood Lane. I've been there since nineteen eighty-three. Forty-one years in the same house. My children keep saying I should downsize.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches what we have on file.",
+                    "nextNodeId": "matches"
+                },
+                {
+                    "text": "Any chance you've moved recently?",
+                    "nextNodeId": "moved"
+                }
+            ]
+        },
+        {
+            "id": "matches",
+            "text": "Well, of course it does. I haven't moved since Gerald Ford was president. The neighbors have changed four times over but I'm still there.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Forty-one years. That's impressive. Everything checks out.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "Me? Heavens, no. I wouldn't know where to put forty years of books. Four twelve Birchwood Lane. Same mailbox, same oak tree, same everything.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Good enough. Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Thank you, dear. I'll just finish my candy and wait for the prescription. No rush.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_10_address",
+    "speakerName": "Becca",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address. Sixty-two Cord Street. I'm literally three blocks from the hospital. Shortest commute on the floor.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. That's close.",
+                    "nextNodeId": "close_by"
+                },
+                {
+                    "text": "Any recent change of address?",
+                    "nextNodeId": "moved"
+                }
+            ]
+        },
+        {
+            "id": "close_by",
+            "text": "I moved there on purpose after residency. Some nurses drive forty minutes each way. I don't understand it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed. You're all set.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "No. Three years at the same address. Sixty-two Cord Street.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Confirmed. You're good.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Good. Thank you for being quick.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

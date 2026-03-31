@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_07_address",
+    "speakerName": "Theo",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh — address. Um. It's on the ID, hold on. Fourteen Overlook Apartments. Building C. It's a student complex, near campus. Me and my roommate have been there since August.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches the ID.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "Any chance your address has changed recently?",
+                    "nextNodeId": "changed"
+                }
+            ]
+        },
+        {
+            "id": "changed",
+            "text": "No, we just renewed the lease. Fourteen Overlook, Building C. The parking is terrible but the walls are thick and that matters when you're in finals.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Great. I'm gonna go wait over there and not touch anything. I don't want to spread strep to the whole strip mall.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

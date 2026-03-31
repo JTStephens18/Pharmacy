@@ -1,0 +1,87 @@
+{
+    "dialogueId": "npc_customer_11",
+    "speakerName": "Frank",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hi, good evening. Frank Delaney. I know how it looks, I promise. Before you pull it up — let me just explain, because I've had to explain it a few times today.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Go ahead.",
+                    "nextNodeId": "explain"
+                },
+                {
+                    "text": "I'll pull it up first and we can go from there.",
+                    "nextNodeId": "pull_first"
+                }
+            ]
+        },
+        {
+            "id": "explain",
+            "text": "My partner usually handles my personal prescriptions. We share a practice. He's been in Vancouver for two weeks — family thing. I had a back flare-up three days ago, nothing serious, and I wrote myself a script for the hydrocodone I've been on before. I know. I know it's not ideal. But it's all documented — my chart is at the practice, my history with this medication is documented. I'm not some stranger.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I appreciate you explaining. I still need to run your ID.",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "I understand the situation. What's the prescriber NPI on the form?",
+                    "nextNodeId": "npi_question"
+                }
+            ]
+        },
+        {
+            "id": "pull_first",
+            "text": "Of course, of course. Here's the ID. I just want to flag it upfront so it's not a surprise — the prescriber and the patient are the same person. I'm a GP. I've been in practice here nineteen years.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I see that. I need to verify this.",
+                    "nextNodeId": "verify"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Yes, here. It's my hospital ID — no wait, I have the driver's license. Here. The white coat is mine, I just didn't want to carry it in. Old habit.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Thank you. One moment.",
+                    "nextNodeId": "verify"
+                }
+            ]
+        },
+        {
+            "id": "npi_question",
+            "text": "Nine nine zero zero one one two two three three. Mine. It should show as active — I'm still seeing patients. This is really just a documentation issue more than anything else. It's a gap in how we handle vacation coverage and I've been meaning to address it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Your NPI is valid. That's not the issue.",
+                    "nextNodeId": "verify"
+                }
+            ]
+        },
+        {
+            "id": "verify",
+            "text": "The prescription is clean. Everything is documented. I have been prescribing for nearly two decades and I have never done anything that wasn't documented. I just need the medication.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I need to flag this for review. A physician cannot prescribe to themselves.",
+                    "nextNodeId": "flag_response"
+                }
+            ]
+        },
+        {
+            "id": "flag_response",
+            "text": "I understand your position. I do. I'm just asking you to use your judgment here. I'm a doctor. I know what I need.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

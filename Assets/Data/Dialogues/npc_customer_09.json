@@ -1,0 +1,87 @@
+{
+    "dialogueId": "npc_customer_09",
+    "speakerName": "Carl",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Cold today. You feel that coming in? Got that damp edge to it. Feels like it wants to snow but can't quite commit.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It does. Been like that all week.",
+                    "nextNodeId": "weather_chat"
+                },
+                {
+                    "text": "What can I help you with today?",
+                    "nextNodeId": "redirect"
+                }
+            ]
+        },
+        {
+            "id": "weather_chat",
+            "text": "That's Ohio for you. Used to be worse when I was on the route. Carrying mail in that kind of weather — bag gets heavy. You don't want to know what a wet catalog does to your shoulder after twenty years.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I can imagine. Monthly pickup?",
+                    "nextNodeId": "pickup"
+                },
+                {
+                    "text": "Mail carrier? How long were you on the route?",
+                    "nextNodeId": "route"
+                }
+            ]
+        },
+        {
+            "id": "redirect",
+            "text": "Monthly pickup. Carl Dunbar. The warfarin. I know the drill — I'll need my ID scanned, you'll ask me two or three things, then I'll grab a paper and be out of your way.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Sounds right. Let me see your ID.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "pickup",
+            "text": "You know it. Carl Dunbar. Fifteen years in this Tuesday slot — give or take. They know my name here. At least they used to. You don't, of course, but I'm not holding it against you.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Fifteen years is impressive. Let me pull you up.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "route",
+            "text": "Twenty-three years. Same neighborhood the whole time. I knew every dog on that route by name. The dogs were better than the people about being on time, honestly. *chuckles* They've got kids on those routes now running around with carts. Kids don't know what they're doing.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Different era. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Here you go. I'll grab a paper while you pull me up. They still have the TV Guide, or did they stop carrying it?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "We've got both over by the register.",
+                    "nextNodeId": "end_warm"
+                }
+            ]
+        },
+        {
+            "id": "end_warm",
+            "text": "Good. Some things should stay the same.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

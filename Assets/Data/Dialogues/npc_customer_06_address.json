@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_06_address",
+    "speakerName": "Sandra",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address? Seven twenty-two Elm Park Drive. It's four blocks from the school, which my colleagues think is convenient and I think is why I can never stop thinking about work.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches what we have.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "Any recent change of address?",
+                    "nextNodeId": "moved"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "No. I've been there six years. I keep saying I'll move somewhere I can't see the school roof from my kitchen window, but rent is what it is.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Thank you. I'm going to get the ibuprofen and then I'm going home and I am not grading anything tonight. That's a lie, I'm going to grade things. But I'm going to feel bad about it.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

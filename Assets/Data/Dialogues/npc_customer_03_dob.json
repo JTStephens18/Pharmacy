@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_03_dob",
+    "speakerName": "Tommy",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth? Uh — January eighth, eighty-nine. I always forget if I'm supposed to say the year or just the date.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just the date is fine. That matches.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you give me the full year?",
+                    "nextNodeId": "full_year"
+                }
+            ]
+        },
+        {
+            "id": "full_year",
+            "text": "Nineteen eighty-nine. January eighth. I share a birthday with Elvis, supposedly. Someone told me that once at a bar and I still don't know if it's true.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. We're good.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Cool. Is that it or do you need anything else? No pressure, I'm just — I've been on my feet since six this morning.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That's everything. Go get your drink.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "Ha. Yeah. Thanks.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

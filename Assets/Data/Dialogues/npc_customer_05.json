@@ -1,0 +1,101 @@
+{
+    "dialogueId": "npc_customer_05",
+    "speakerName": "Ray",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Good evening. I have a prescription I need to fill. I'm passing through — starting a new position on Monday, three states west. My regular pharmacy is back in Whitmore.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "What's the medication?",
+                    "nextNodeId": "medication"
+                },
+                {
+                    "text": "I'll need to see the prescription and your ID.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "medication",
+            "text": "Oxycodone. Ten milligrams. Sixty tablets. Chronic back pain — workplace injury, two years ago. It's all documented on the prescription.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Can I see the prescription and your ID?",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "Sixty tablets is unusual for this medication.",
+                    "nextNodeId": "quantity_question"
+                }
+            ]
+        },
+        {
+            "id": "quantity_question",
+            "text": "My doctor writes them that way. Two months at a time. It's a long drive back for a refill.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll need to verify the prescriber details.",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "I understand. Let me pull up the prescriber information.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Of course.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll run this through the system.",
+                    "nextNodeId": "system_check"
+                }
+            ]
+        },
+        {
+            "id": "system_check",
+            "text": "Take whatever time you need.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "There's an issue with the prescriber on file.",
+                    "nextNodeId": "flag_npi"
+                },
+                {
+                    "text": "Can you confirm your date of birth while I look this up?",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "flag_npi",
+            "text": "What kind of issue?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "The prescriber's NPI doesn't appear to be active.",
+                    "nextNodeId": "npi_response"
+                }
+            ]
+        },
+        {
+            "id": "npi_response",
+            "text": "There must be an error in the system. Dr. Rosen has been treating me for two years. I can assure you the prescription is legitimate.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "dob_prompt",
+            "text": "March third, nineteen eighty-five.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

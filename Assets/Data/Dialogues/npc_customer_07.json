@@ -1,0 +1,95 @@
+{
+    "dialogueId": "npc_customer_07",
+    "speakerName": "Theo",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hi, um — I just came from urgent care. They gave me amoxicillin. I've never had to take antibiotics before so I was hoping someone here could — is this a good time to ask questions? I don't want to slow things down.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "You can always ask questions. What's on your mind?",
+                    "nextNodeId": "questions"
+                },
+                {
+                    "text": "Let me get your prescription going first, then we can talk.",
+                    "nextNodeId": "rx_first"
+                }
+            ]
+        },
+        {
+            "id": "questions",
+            "text": "Okay, great. So — is it okay to take it with food? I read online that some antibiotics you're not supposed to, but I think amoxicillin might be okay? And is it normal to feel worse before you feel better?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Amoxicillin is fine with food, actually recommended. And yes, a day or two of feeling worse is normal.",
+                    "nextNodeId": "course_question"
+                },
+                {
+                    "text": "Your doctor would have told you if there were food restrictions. What's your concern about feeling worse?",
+                    "nextNodeId": "feeling_worse"
+                }
+            ]
+        },
+        {
+            "id": "rx_first",
+            "text": "Yeah, sure, that makes sense. Theo Marsh. M-A-R-S-H. The prescription is from the urgent care on Fourth — Dr. Reyes, I think. I still have the wristband on, sorry.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I can see that. It's fine. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "course_question",
+            "text": "That's such a relief. And — this is maybe a dumb question — but do I have to finish the whole course even if I feel better? My roommate didn't finish his last month and he seemed fine, but my doctor was pretty specific about it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Finish the course. Your doctor's right. Stopping early lets resistant bacteria survive.",
+                    "nextNodeId": "roommate_note"
+                },
+                {
+                    "text": "Your roommate got lucky. Your doctor's right — finish it.",
+                    "nextNodeId": "roommate_note"
+                }
+            ]
+        },
+        {
+            "id": "feeling_worse",
+            "text": "My throat is really bad and I've had a headache all day. I just want to know if that's strep being strep or if something else is going on.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That's strep being strep. The amoxicillin will start working in twenty-four to forty-eight hours.",
+                    "nextNodeId": "roommate_note"
+                }
+            ]
+        },
+        {
+            "id": "roommate_note",
+            "text": "Okay, that's really helpful. Oh — is it weird that my roommate had the same prescription last month? Like the exact same drug and dose? We live in the same apartment. Is strep going around or something?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Strep is contagious, so yes, it's possible it went between you two.",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "Not weird at all. Can I see your ID to get this filled?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Oh right, yeah. Here. Sorry, my hands are a little clammy — I've been running a fever. They said it would come down once the antibiotic kicks in.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

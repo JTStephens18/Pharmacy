@@ -1,0 +1,80 @@
+{
+    "dialogueId": "npc_customer_10_info",
+    "speakerName": "Becca",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Scanned. Okay. What do you need?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just confirming your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Question about the prescriber.",
+                    "nextNodeId": "prescriber_q"
+                },
+                {
+                    "text": "Everything looks fine. You're almost done.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "June third, ninety-five.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Almost done.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "prescriber_q",
+            "text": "Dr. Helen Okafor, psychiatry, she's at the clinic on Grant Avenue. NPI's on the prescription. I've been her patient for two years. Is there a problem?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No problem. Psychiatry and sertraline are a routine match.",
+                    "nextNodeId": "know_that"
+                },
+                {
+                    "text": "Everything checks out.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "know_that",
+            "text": "I know that. I'm an RN. I'm just used to people making it weird.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Fair enough. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Great. How long?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just a few minutes.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "Good.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

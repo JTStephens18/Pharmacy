@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_04_address",
+    "speakerName": "Diane",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address? *looks up* Two-nineteen Maple Court. It's right across from the nail salon — I basically live at work. *laughs once, goes back to phone*",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. We're confirmed.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "You live that close to the strip mall?",
+                    "nextNodeId": "close_by"
+                }
+            ]
+        },
+        {
+            "id": "close_by",
+            "text": "Yeah, I know. I moved there on purpose so I could walk. No parking stress. *still texting* It's fine. Very convenient.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Good setup. Address is confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Great. *phone buzzes twice* Can I—",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

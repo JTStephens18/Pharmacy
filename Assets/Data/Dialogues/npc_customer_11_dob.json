@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_11_dob",
+    "speakerName": "Frank",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth. March twenty-second, seventy-two. Nineteen seventy-two. I share it with a colleague of mine — we always joke about that. Two Pisces in the same practice.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you confirm the full year?",
+                    "nextNodeId": "full_year"
+                }
+            ]
+        },
+        {
+            "id": "full_year",
+            "text": "Nineteen seventy-two. I'm fifty-one. Old enough to know better, young enough to still have a back that gives out on me. *small laugh* Sorry. Long day.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Good. And everything else is documented, as I mentioned. I just want to be sure you understand I'm not trying to do anything outside the normal bounds here.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I understand your position.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "I appreciate that. I do.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

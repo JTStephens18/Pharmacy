@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_03_address",
+    "speakerName": "Tommy",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address? Yeah — eight-oh-three Kellner Road. Apartment 2B. It's the one with the brown shutters they keep saying they'll repaint. Been there about four years.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're confirmed.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "Any recent changes to your address?",
+                    "nextNodeId": "recent_change"
+                }
+            ]
+        },
+        {
+            "id": "recent_change",
+            "text": "Nah. I keep thinking about moving — my buddy's got a place over on the east side, cheaper rent — but I'd have to update like fifteen different things. So. Brown shutters it is.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed. We're all set.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Perfect. I'm gonna go wash my hands before I touch anything else in this store.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

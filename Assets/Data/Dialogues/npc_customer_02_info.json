@@ -1,0 +1,105 @@
+{
+    "dialogueId": "npc_customer_02_info",
+    "speakerName": "Marlene",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh — did you scan my card? Is something the matter? I've never had a problem in twenty-two years.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just routine verification. Everything looks fine so far.",
+                    "nextNodeId": "routine"
+                },
+                {
+                    "text": "I need to confirm a couple of details with you.",
+                    "nextNodeId": "confirm_details"
+                },
+                {
+                    "text": "I want to ask about your prescription.",
+                    "nextNodeId": "prescription"
+                }
+            ]
+        },
+        {
+            "id": "routine",
+            "text": "Oh, of course. I'm sorry — I always get a little nervous when someone scans things. Force of habit from the library, I think. We were very careful about patron records.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Nothing to worry about. Your records look good.",
+                    "nextNodeId": "end_clear"
+                },
+                {
+                    "text": "Can you confirm your date of birth for me?",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "confirm_details",
+            "text": "Of course. Name, date of birth, address — I have it all memorized at this point. Twenty-two years of the same forms.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Can you confirm your date of birth?",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Can you confirm your current address?",
+                    "nextNodeId": "address_prompt"
+                }
+            ]
+        },
+        {
+            "id": "prescription",
+            "text": "The amlodipine? Five milligrams, thirty tablets, Dr. Ellison — same as always. She's very consistent. Is there a problem with the prescription?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No problem. Everything matches.",
+                    "nextNodeId": "end_clear"
+                },
+                {
+                    "text": "Just verifying. Your history here is excellent.",
+                    "nextNodeId": "end_warm"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "Oh, I'll save you the trouble — March fourteenth, nineteen fifty-seven. I always remember it because it's Pi Day. My students used to make a big fuss about it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "address_prompt",
+            "text": "Same house I've been in for forty-one years. Four twelve Birchwood Lane. I keep meaning to update my driver's license photo — it's from 1989.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address checks out. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Wonderful. Thank you for being thorough. Mr. Hargrove always said a careful pharmacist was worth more than a fast one.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_warm",
+            "text": "Twenty-two years and never a hiccup. I appreciate the care you take.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

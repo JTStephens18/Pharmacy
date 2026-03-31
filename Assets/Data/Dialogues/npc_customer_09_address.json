@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_09_address",
+    "speakerName": "Carl",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Address? Eight-oh-nine Maple Run Court. Been there forty-three years. Raised two kids, buried one dog, survived three rounds of the city repaving the street wrong.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Forty-three years. That's quite a history.",
+                    "nextNodeId": "long_time"
+                },
+                {
+                    "text": "That matches. Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "long_time",
+            "text": "Long enough to watch the neighborhood change three times. Used to be you could leave your door unlocked. Now I've got a Ring camera. Different world. But it's home.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Address confirmed. Thanks, Carl.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Same place I've been every Tuesday for fifteen years. Not going anywhere.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

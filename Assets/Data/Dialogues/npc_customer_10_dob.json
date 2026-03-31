@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_10_dob",
+    "speakerName": "Becca",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "June third, ninety-five.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Full year?",
+                    "nextNodeId": "full_year"
+                }
+            ]
+        },
+        {
+            "id": "full_year",
+            "text": "Nineteen ninety-five.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. We're good.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Okay.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

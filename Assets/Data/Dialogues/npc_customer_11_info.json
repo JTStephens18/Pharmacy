@@ -1,0 +1,80 @@
+{
+    "dialogueId": "npc_customer_11_info",
+    "speakerName": "Frank",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "You've seen it, then. The prescriber and patient name. I was going to mention that — I thought I already mentioned that.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "You did. I need to ask you about it formally.",
+                    "nextNodeId": "formal_check"
+                },
+                {
+                    "text": "The system has flagged this automatically.",
+                    "nextNodeId": "auto_flag"
+                }
+            ]
+        },
+        {
+            "id": "formal_check",
+            "text": "Of course. Ask away. I've got nothing to hide — it's all documented, my employment records, my prescription history, everything. I've been a GP here for nineteen years. This is not typical for me.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "A physician prescribing a Schedule II controlled substance to themselves is prohibited under federal law.",
+                    "nextNodeId": "law_response"
+                },
+                {
+                    "text": "Can you confirm your date of birth?",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "auto_flag",
+            "text": "I see. Well, that's the software doing its job, I suppose. For what it's worth, the situation is temporary and documented. My partner is back from Vancouver next week. I just needed the coverage.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Documentation doesn't change the regulatory issue.",
+                    "nextNodeId": "law_response"
+                },
+                {
+                    "text": "Can you confirm your date of birth while I review this?",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "law_response",
+            "text": "I'm aware of the regulation. I'm also a physician in good standing asking you to apply some common sense. I've been coming here — well, not here specifically, but to pharmacies like this — for twenty years. I know what responsible prescribing looks like.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I understand. But I can't fill this.",
+                    "nextNodeId": "end_hold"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "March twenty-second, nineteen seventy-two. Fifty-one years old. I've been a doctor for half of those years, for whatever that's worth.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. I still need to address the prescriber issue.",
+                    "nextNodeId": "law_response"
+                }
+            ]
+        },
+        {
+            "id": "end_hold",
+            "text": "I see. I'm going to ask you to reconsider. I'm asking as a colleague.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

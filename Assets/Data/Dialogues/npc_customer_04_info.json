@@ -1,0 +1,69 @@
+{
+    "dialogueId": "npc_customer_04_info",
+    "speakerName": "Diane",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "You scanned my card? *looks up from phone* Is something wrong?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No issue. Just verifying your details.",
+                    "nextNodeId": "no_issue"
+                },
+                {
+                    "text": "I have a question about your prescription.",
+                    "nextNodeId": "rx_question"
+                }
+            ]
+        },
+        {
+            "id": "no_issue",
+            "text": "Okay. Yeah. Go ahead. *puts phone face-down*",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Everything looks good. Just need your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "All clear. Thank you.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "rx_question",
+            "text": "The levothyroxine? It's Dr. Blake's prescription. Fiona Blake — she's over at the endocrinology office on the south side. I've been seeing her four years. Is there a problem with the NPI or something?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No problem at all. Prescription matches.",
+                    "nextNodeId": "end_clear"
+                },
+                {
+                    "text": "Everything checks out.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "April twenty-second, seventy-one. *checks phone briefly*",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're all set.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Great. *picks up phone immediately*",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

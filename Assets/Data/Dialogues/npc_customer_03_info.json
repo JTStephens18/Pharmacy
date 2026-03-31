@@ -1,0 +1,84 @@
+{
+    "dialogueId": "npc_customer_03_info",
+    "speakerName": "Tommy",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh, you scanned it? Is something — did I smudge it? The barcode thing? I can clean it off if that's the issue.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It scanned fine. Just a routine check.",
+                    "nextNodeId": "routine"
+                },
+                {
+                    "text": "I need to confirm some details with you.",
+                    "nextNodeId": "confirm"
+                },
+                {
+                    "text": "Question about your prescription.",
+                    "nextNodeId": "prescription"
+                }
+            ]
+        },
+        {
+            "id": "routine",
+            "text": "Oh thank god. Yeah, I was worried I'd messed it up somehow. Okay. Yeah. Ask me whatever you need.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Everything's fine. You're all set.",
+                    "nextNodeId": "end_clear"
+                },
+                {
+                    "text": "Can you confirm your date of birth?",
+                    "nextNodeId": "dob_prompt"
+                }
+            ]
+        },
+        {
+            "id": "confirm",
+            "text": "Sure. Lisinopril, ten milligrams, Dr. Webb — Marcus Webb, NPI and everything, it's all on the prescription. I've been with him about three years now. Good guy.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Prescription checks out. Just need your date of birth.",
+                    "nextNodeId": "dob_prompt"
+                },
+                {
+                    "text": "Everything looks good. Thank you.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "prescription",
+            "text": "Yeah — it's the lisinopril. Ten milligrams. I'm supposed to take it every morning but I forget sometimes when I'm on a job. Doc says it's not the end of the world as long as I'm consistent most days.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Noted. Prescription matches. You're good.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "dob_prompt",
+            "text": "January eighth, eighty-nine. Capricorn, apparently, though I have no idea what that means.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're all set, Tommy.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_clear",
+            "text": "Great. Thanks for being quick about it — I still gotta grab that drink and then I'm done for the day.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

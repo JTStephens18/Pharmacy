@@ -1,0 +1,91 @@
+{
+    "dialogueId": "npc_customer_03",
+    "speakerName": "Tommy",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hey, sorry — I know, I know. I was gonna clean up first. Hold on.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It's fine. What can I help you with?",
+                    "nextNodeId": "no_problem"
+                },
+                {
+                    "text": "Rough day at work?",
+                    "nextNodeId": "rough_day"
+                }
+            ]
+        },
+        {
+            "id": "no_problem",
+            "text": "Appreciate it. Tommy Briggs. Monthly pickup — lisinopril. I meant to swing home first but traffic on the bypass was just brutal tonight. Figured I'd just stop.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "The bypass is always bad around five. Let me look you up.",
+                    "nextNodeId": "look_up"
+                },
+                {
+                    "text": "No problem. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "rough_day",
+            "text": "You could say that. Three-car job, one of them had a cracked block nobody mentioned. Four hours of overtime right there. I hold my hands up — sorry, I swear I'm not usually like this.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No need to apologize. Who are you picking up for?",
+                    "nextNodeId": "pickup_for"
+                },
+                {
+                    "text": "Sounds like you earned a drink. Can I get your name?",
+                    "nextNodeId": "name_request"
+                }
+            ]
+        },
+        {
+            "id": "look_up",
+            "text": "Yeah, I should've taken Cedar Street but I always forget. Tommy Briggs. B-R-I-G-G-S. Dr. Webb's my guy. You need the ID?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Please.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "pickup_for",
+            "text": "Just me. Lisinopril, ten milligrams. Dr. Webb put me on it about eighteen months ago. Blood pressure. I keep telling myself I'll cut back on the red meat but here we are.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "One step at a time. I'll pull up your file.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "name_request",
+            "text": "Tommy Briggs. And yeah, honestly, I'm grabbing one of those energy drinks before I head out. Don't judge me.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "After a day like that? Go ahead. ID first though.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Yeah, yeah — here. Sorry about the fingerprints on it, I tried to wipe it on my shirt but that didn't help much.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

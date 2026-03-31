@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_05_address",
+    "speakerName": "Ray",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "My address. Four forty-one Renner Street, Whitmore.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches the ID.",
+                    "nextNodeId": "end_confirmed"
+                },
+                {
+                    "text": "You said you're leaving for a new job. Is this still current?",
+                    "nextNodeId": "still_current"
+                }
+            ]
+        },
+        {
+            "id": "still_current",
+            "text": "It's current until Monday. I haven't established a new residence yet.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Understood. Address matches the ID.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Then we're in agreement.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

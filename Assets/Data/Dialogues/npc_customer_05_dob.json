@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_05_dob",
+    "speakerName": "Ray",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth. March third, nineteen eighty-five.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches what we have.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Any chance the year is different?",
+                    "nextNodeId": "challenge"
+                }
+            ]
+        },
+        {
+            "id": "challenge",
+            "text": "No. March third, nineteen eighty-five. That is correct.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That does match. My mistake.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Is there anything else you need to verify?",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

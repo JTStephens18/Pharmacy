@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_07_dob",
+    "speakerName": "Theo",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth? November second, two thousand one. Is that — does that match? I always feel like I'm going to blank on my own birthday under pressure.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. You're fine.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you confirm the year again?",
+                    "nextNodeId": "confirm_year"
+                }
+            ]
+        },
+        {
+            "id": "confirm_year",
+            "text": "Two thousand and one. November second. I was born the month after September eleventh which means my parents had a very stressful year and I try not to bring it up at holidays.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Everything checks out.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Great. Is there anything else? I'm going to get some throat lozenges if you don't need me here.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That's all I need. Go rest.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "Thank you. I really hope this kicks in fast.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

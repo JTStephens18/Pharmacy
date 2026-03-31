@@ -1,0 +1,98 @@
+{
+    "dialogueId": "npc_customer_04",
+    "speakerName": "Diane",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hi. Picking up a prescription. Diane Yoo.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll look you up. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "Do you have a moment? I need to verify a few things.",
+                    "nextNodeId": "verify"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Yeah, one second—",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Take your time.",
+                    "nextNodeId": "take_time"
+                }
+            ]
+        },
+        {
+            "id": "take_time",
+            "text": "Sorry, sorry. *taps at phone* Here—",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I've got your file here.",
+                    "nextNodeId": "file_found"
+                }
+            ]
+        },
+        {
+            "id": "verify",
+            "text": "Yeah, fine. It's the levothyroxine. Fifty micrograms. Been on it since—  hold on. *checks phone* Sorry. What do you need?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just your ID and date of birth.",
+                    "nextNodeId": "id_dob"
+                },
+                {
+                    "text": "How long have you been on levothyroxine?",
+                    "nextNodeId": "how_long"
+                }
+            ]
+        },
+        {
+            "id": "file_found",
+            "text": "Great. I'm also gonna grab the nail files over here — I know where they are, I'm not going to knock anything over.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Go ahead. I'll process your prescription.",
+                    "nextNodeId": "end_processing"
+                }
+            ]
+        },
+        {
+            "id": "id_dob",
+            "text": "Here's the ID. DOB is on it. *phone buzzes* One second — okay. Okay. Sorry, what were you saying?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I have what I need. You're all set once I run this through.",
+                    "nextNodeId": "end_processing"
+                }
+            ]
+        },
+        {
+            "id": "how_long",
+            "text": "God. Like four years? Dr. Blake caught it on a routine panel. I was tired all the time and I thought it was just the job but no, turns out my thyroid's just slow. *checks phone* Sorry.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Nothing to apologize for. Let me get your ID and we'll get you out of here.",
+                    "nextNodeId": "end_processing"
+                }
+            ]
+        },
+        {
+            "id": "end_processing",
+            "text": "*already back on phone* Thanks.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -1,0 +1,123 @@
+{
+    "dialogueId": "npc_customer_02",
+    "speakerName": "Marlene",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Oh, hello there. I'm sorry — are you new? I'm terrible with faces, you'll have to forgive me. I've been coming here so long I used to know everyone by name.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'm fairly new, yes. What can I help you with?",
+                    "nextNodeId": "new_yes"
+                },
+                {
+                    "text": "I've been here a little while. You might have seen me before.",
+                    "nextNodeId": "new_maybe"
+                },
+                {
+                    "text": "What brings you in today?",
+                    "nextNodeId": "redirect"
+                }
+            ]
+        },
+        {
+            "id": "new_yes",
+            "text": "Oh, well that's nice. Welcome. It used to be that Mr. Hargrove — he was here for twenty years — he knew every customer by their first name. You'd come in and he'd already have your bag ready. That doesn't happen anymore.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That sounds like a nice way to run a pharmacy.",
+                    "nextNodeId": "nice_way"
+                },
+                {
+                    "text": "Things are a bit busier now, I think.",
+                    "nextNodeId": "busier"
+                }
+            ]
+        },
+        {
+            "id": "new_maybe",
+            "text": "Well, I may have! I'm afraid faces just don't stick the way they used to. My doctor tells me it's nothing to worry about. I've been on the amlodipine for over twenty years, so I really should have the routine down by now.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Twenty years is quite a while. We probably do have your file.",
+                    "nextNodeId": "have_file"
+                },
+                {
+                    "text": "Let me pull up your prescription.",
+                    "nextNodeId": "pull_up"
+                }
+            ]
+        },
+        {
+            "id": "redirect",
+            "text": "Oh, of course, sorry. Monthly pickup. I'm Marlene Hoffman — H-O-F-F-M-A-N. I always spell it out because once they put me in as Huffman and it was a whole ordeal.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll look you up. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "nice_way",
+            "text": "It was, it was. Anyway, I don't want to hold you up. I'll just pick up something sweet while I wait. I always get the hard candies — they're right over there, aren't they?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Yes, same spot as always.",
+                    "nextNodeId": "end_warm"
+                }
+            ]
+        },
+        {
+            "id": "busier",
+            "text": "I suppose so. It's a different world. I'm not complaining — just remembering. Now, I'll let you get to it. I think I'll grab some hard candies while I wait.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Of course. I'll start on your prescription.",
+                    "nextNodeId": "end_warm"
+                }
+            ]
+        },
+        {
+            "id": "have_file",
+            "text": "Twenty-two years this April, actually. Dr. Ellison's been my doctor the whole time. She's very thorough. Now, can I grab some hard candies while you look me up?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Go right ahead.",
+                    "nextNodeId": "end_warm"
+                }
+            ]
+        },
+        {
+            "id": "pull_up",
+            "text": "Hoffman. Marlene. I always spell it — H-O-F-F-M-A-N — because once they put me in as Huffman and I nearly didn't get my medication that month.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Got it. Let me get your ID scanned.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Oh yes, of course. Here you are. I always have it ready — learned that from Mr. Hargrove too.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_warm",
+            "text": "Thank you, dear. I'll just be over here with my candy.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

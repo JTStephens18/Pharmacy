@@ -1,0 +1,90 @@
+{
+    "dialogueId": "npc_customer_05_info",
+    "speakerName": "Ray",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "You've scanned my ID. Is there a problem with it?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Just routine verification. Can you confirm your date of birth?",
+                    "nextNodeId": "dob_confirm"
+                },
+                {
+                    "text": "I need to ask about your prescription.",
+                    "nextNodeId": "rx_question"
+                },
+                {
+                    "text": "I'm looking into the prescriber details.",
+                    "nextNodeId": "prescriber_check"
+                }
+            ]
+        },
+        {
+            "id": "dob_confirm",
+            "text": "March third, nineteen eighty-five.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Question about your prescriber—",
+                    "nextNodeId": "prescriber_check"
+                },
+                {
+                    "text": "That's all I needed. One moment.",
+                    "nextNodeId": "end_holding"
+                }
+            ]
+        },
+        {
+            "id": "rx_question",
+            "text": "The oxycodone. Dr. Gail Rosen. I've been under her care for two years. The injury is documented. I've filled this prescription many times at my regular pharmacy.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'm not finding any fill history at this location.",
+                    "nextNodeId": "no_history"
+                },
+                {
+                    "text": "The prescriber's NPI is showing as inactive.",
+                    "nextNodeId": "npi_inactive"
+                }
+            ]
+        },
+        {
+            "id": "prescriber_check",
+            "text": "Dr. Gail Rosen. NPI should be on the prescription printout.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "The NPI doesn't resolve to an active prescriber.",
+                    "nextNodeId": "npi_inactive"
+                }
+            ]
+        },
+        {
+            "id": "no_history",
+            "text": "That's expected. I've never been to this pharmacy before. My records are in Whitmore.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "We can request a transfer but I also need to verify the prescriber NPI.",
+                    "nextNodeId": "npi_inactive"
+                }
+            ]
+        },
+        {
+            "id": "npi_inactive",
+            "text": "There must be an error in your database. She's been my physician for two years.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_holding",
+            "text": "Of course. I'll wait.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

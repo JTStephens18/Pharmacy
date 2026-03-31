@@ -1,0 +1,45 @@
+{
+    "dialogueId": "npc_customer_09_dob",
+    "speakerName": "Carl",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Birthday! July seventeenth, fifty-two. Nineteen fifty-two. Sixty-seven years married to the same doctor routine and I still look forward to the birthday cake. Even if it's just me and the dog now.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Happy early birthday if it's coming up.",
+                    "nextNodeId": "end_warm"
+                },
+                {
+                    "text": "That matches. Thank you, Carl.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_warm",
+            "text": "Oh it's in July, we've got a while. But I appreciate the thought. Nice to be remembered.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_match",
+            "text": "Good. So we're square?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "We're square.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "Good enough for me.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

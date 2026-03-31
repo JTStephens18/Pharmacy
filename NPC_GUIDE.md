@@ -437,3 +437,320 @@ Before submitting any NPC entry, confirm:
 - [ ] Flag difficulty matches the night (easy on night 1)
 - [ ] Aftermath is documented and used as a narrative beat
 - [ ] Narrative purpose is clearly stated
+
+---
+
+## NPC Roster — Entries 02–11
+
+---
+
+### NPC 02 — Marlene Hoffman
+
+**NAME:** Marlene Hoffman
+**AGE:** 67
+**CONTEXT:** Retired school librarian. Monthly regular for 22 years. Comes in mid-morning on weekdays. Has never once been in a hurry.
+
+**PRESCRIPTION**
+- Drug and dose: Amlodipine 5mg
+- Quantity: 30 tablets
+- Refills: Ongoing maintenance
+- Prescriber: Dr. Ruth Ellison, GP — NPI 2345678901
+- Prescriber specialty: General practice
+- Condition: Hypertension, long-managed
+
+**QUIRK**
+- Primary: Always asks if you're new, with a kind apology — "I'm terrible with faces, you'll have to forgive me." Wistfully mentions it used to be better when pharmacists knew their customers by name.
+- Shelf purchase: A bag of hard candy from the same spot on the same shelf every time.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**DESIGN NOTES:** Marlene is a low-stakes warmth anchor. She establishes the long-term customer archetype and the sense that this pharmacy has a history. Her question about whether you're new is not suspicious — it's social. She functions as a palate cleanser between harder NPCs. No false positive risk.
+
+---
+
+### NPC 03 — Tommy Briggs
+
+**NAME:** Tommy Briggs
+**AGE:** 34
+**CONTEXT:** Auto mechanic. Came straight from a job. Grease on his knuckles, work shirt still on. Stopped in on the way home after getting caught in traffic.
+
+**PRESCRIPTION**
+- Drug and dose: Lisinopril 10mg
+- Quantity: 30 tablets
+- Refills: 3 remaining
+- Prescriber: Dr. Marcus Webb, GP — NPI 3456789012
+- Prescriber specialty: General practice
+- Condition: Hypertension, early management
+
+**QUIRK**
+- Primary: Holds up both hands immediately when he reaches the counter — "Sorry, I know, I meant to clean up first. Traffic was murder out there today." Sheepish about it but not embarrassed enough to leave.
+- Shelf purchase: An energy drink from the refrigerated section near the door.
+
+**DOPPELGANGER-ELIGIBLE:** Yes
+
+---
+
+**DOPPELGANGER VERSION OF: Tommy Briggs**
+
+**SWAPPED PRESCRIPTION DETAILS**
+- Prescriber changed from Dr. Marcus Webb (NPI 3456789012) to Dr. Ellen Cord, GP (NPI 4477889900) — no transfer note, no documented reason for switch
+
+**WHAT THE QUIRK GETS WRONG**
+- Missing: Does not hold up his hands or apologize for the grease
+- Missing: No mention of traffic or being late
+- Missing: Does not buy the energy drink
+- Present: The grease is still there — the surface detail is correct. What's absent is the social reflex a real person would have.
+
+**ADDITIONAL FLAGS:** None — the prescriber flag alone is sufficient
+
+**FLAG DIFFICULTY:** Medium — prescriber change requires active cross-reference; behavioral tell requires having seen the real Tommy at least once
+
+**AFTERMATH:** Standard.
+
+**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The tell is specifically in the missing apology — a person impersonating Tommy knows about the grease (it's visible) but didn't rehearse the embarrassment.
+
+---
+
+### NPC 04 — Diane Yoo
+
+**NAME:** Diane Yoo
+**AGE:** 52
+**CONTEXT:** Works at the nail salon in the strip mall, two doors down from the pharmacy. Came in on a slow afternoon between appointments.
+
+**PRESCRIPTION**
+- Drug and dose: Levothyroxine 50mcg
+- Quantity: 30 tablets
+- Refills: Ongoing maintenance
+- Prescriber: Dr. Fiona Blake, Endocrinology — NPI 5678901234
+- Prescriber specialty: Endocrinology
+- Condition: Hypothyroidism, managed
+
+**QUIRK**
+- Primary: On her phone texting the entire time. Puts it face-down on the counter for exactly as long as it takes to sign, then immediately picks it back up.
+- Shelf purchase: A box of nail files — doesn't look at the shelf, reaches directly for them, knows exactly where they are.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**DESIGN NOTES:** Diane is a strip mall neighbor — she knows the layout, doesn't need to browse, and is only half-present. Her distraction is entirely mundane. False positive risk: a player unfamiliar with nail salon workers might read her as evasive. She is not. Her prescription and prescriber are fully appropriate (Endocrinology for hypothyroidism).
+
+---
+
+### NPC 05 — Ray Colton
+
+**NAME:** Ray Colton
+**AGE:** 38
+**CONTEXT:** Claims to be passing through the area on the way to a new job. Says his regular pharmacy is three states away and he needs a one-time fill. Has a printed prescription from an out-of-area doctor.
+
+**FABRICATED PRESCRIPTION**
+- Drug and dose: Oxycodone HCl 10mg
+- Quantity: 60 tablets
+- Prescriber: Dr. Gail Rosen — NPI 6677889900
+- Prescriber specialty: NPI resolves to a retired/delisted physician — no longer licensed to prescribe
+- Stated condition: Chronic back pain from a workplace injury, "ongoing for two years"
+
+**FLAGS**
+- Hard flag 1: NPI resolves to a delisted prescriber — no longer authorized to issue prescriptions
+- Hard flag 2: Quantity 60 is double the standard 30-day supply for this drug class
+- Soft tell: Completely still at the counter. Doesn't fidget, doesn't look at the shelves, doesn't check his phone. Makes consistent, unblinking eye contact. Answers every question with the correct information and no additional texture.
+- Total flag count: 2 hard + 1 soft
+- Flag difficulty: Medium — both hard flags require active database checking; soft tell is atmospheric
+
+**BEHAVIOR:** Polite, patient, unhurried. His composure reads as confidence at first glance. If asked about the injury, he gives a medically plausible account — date, mechanism, treatment history — that contains no personal detail whatsoever. The information is correct. The person behind it is not there.
+
+**AFTERMATH:** The prescription printout, left on the counter, lists a delivery address that does not correspond to any building at that street number. The street exists. The address does not.
+
+**DESIGN NOTES:** Ray is a mid-pool standalone doppelganger suitable for nights 1–2. His two hard flags are both findable by cross-referencing the computer database. The non-existent address is an environmental detail discovered after the fact — it does not affect the decision window. Do not telegraph the aftermath before the player acts.
+
+---
+
+### NPC 06 — Sandra Kowalski
+
+**NAME:** Sandra Kowalski
+**AGE:** 44
+**CONTEXT:** Elementary school teacher at the school four blocks away. End-of-semester crunch. Came in after dismissal, still has her teacher's ID lanyard on.
+
+**PRESCRIPTION**
+- Drug and dose: Metformin 500mg
+- Quantity: 90 tablets
+- Refills: 2 remaining
+- Prescriber: Dr. Ruth Ellison, GP — NPI 2345678901
+- Prescriber specialty: General practice
+- Condition: Type 2 diabetes, early management
+
+**QUIRK**
+- Primary: Constantly references school. Mentions grading, one of her kids said something funny, how she hasn't slept properly in a week.
+- Secondary: Her tote bag is stuffed to capacity with papers. Some slide onto the counter when she sets it down. She grabs them with mild, practiced embarrassment — "Sorry, sorry, they're everywhere."
+- Shelf purchase: Ibuprofen. "For the headaches."
+
+**DOPPELGANGER-ELIGIBLE:** Yes
+
+---
+
+**DOPPELGANGER VERSION OF: Sandra Kowalski**
+
+**SWAPPED PRESCRIPTION DETAILS**
+- Prescriber changed from Dr. Ruth Ellison (NPI 2345678901) to Dr. Steven Hale, GP (NPI 7788990011) — no transfer note, no documented reason for switch
+
+**WHAT THE QUIRK GETS WRONG**
+- Missing: No mention of school, grading, the kids, or being tired
+- Missing: The tote bag is present but sits flat on the counter. Nothing slides out.
+- Missing: Does not buy ibuprofen
+- Present: The lanyard is still there. She has the prop but not the person.
+
+**ADDITIONAL FLAGS:** None
+
+**FLAG DIFFICULTY:** Medium — prescriber flag is the hard tell; behavioral flag requires having seen the real Sandra at least once
+
+**AFTERMATH:** Standard.
+
+**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The empty tote bag is the key visual tell — Sandra's bag is always in motion because she's always just come from somewhere. A flat bag means she packed it to look the part.
+
+---
+
+### NPC 07 — Theo Marsh
+
+**NAME:** Theo Marsh
+**AGE:** 23
+**CONTEXT:** College student. Just came from urgent care — has the patient wristband still on and a copy of the urgent care discharge summary in his pocket. Got strep throat and is visibly uncomfortable.
+
+**PRESCRIPTION**
+- Drug and dose: Amoxicillin 500mg
+- Quantity: 21 capsules
+- Refills: 0
+- Prescriber: Dr. Reyes, urgent care — NPI 5544332211
+- Prescriber specialty: General / urgent care
+- Condition: Streptococcal pharyngitis, acute
+
+**QUIRK**
+- Primary: Full of questions. Side effects? Can he take it with food? Does he need to finish the whole course even if he feels better? Has already read the printout but wants confirmation.
+- Secondary: Mentions his roommate had the exact same prescription last month. "Is that weird? Is strep going around or something?"
+- Shelf purchase: Nothing. He's already spent money at urgent care and is managing on a budget.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**DESIGN NOTES:** Theo is the anxious first-timer archetype. His questions are genuine and slightly exhausting. His prescription is completely standard — urgent care physician, correct drug and quantity, appropriate refill count (zero, because it's an acute infection). False positive risk: his anxiety might read as nervousness. It isn't. He's just unwell and underprepared for adulthood.
+
+---
+
+### NPC 08 — Ellen Voss
+
+**NAME:** Ellen Voss
+**AGE:** 55
+**CONTEXT:** Claims to be a local resident who has been meaning to switch pharmacies for a while. Says she usually goes to the chain across town but heard good things about this one. Has no prior records here.
+
+**FABRICATED PRESCRIPTION**
+- Drug and dose: Hydrocodone/Acetaminophen 5/325mg
+- Quantity: 30 tablets
+- Prescriber: Dr. Paul Manders, DDS — NPI 7899001234
+- Prescriber specialty: Dentistry
+- Stated condition: Chronic knee pain following an old surgery, "long-term"
+
+**FLAGS**
+- Hard flag 1: Prescriber specialty mismatch — a dentist has no scope to prescribe for chronic orthopedic pain management
+- Hard flag 2: No fill history despite claiming to be a long-term local patient on ongoing pain medication
+- Soft tell: Overly polite, slightly stiff. Never looks at the shelves. Doesn't make small talk. Maintains a careful stillness that reads as good manners until it doesn't.
+- Total flag count: 2 hard + 1 soft
+- Flag difficulty: Medium — specialty mismatch is checkable; no-fill-history flag requires knowing that chronic pain patients have dense records
+
+**BEHAVIOR:** Well-dressed, pleasant, measured. She volunteers nothing unexpected. If asked how she heard about the pharmacy, she gives a vague but plausible answer. If asked about the knee, she describes the surgery in general terms — nothing that couldn't be lifted from a pamphlet.
+
+**AFTERMATH:** When she steps back from the counter, a business card falls from her purse. The name on it does not match her ID. The card is from a medical supply company.
+
+**DESIGN NOTES:** Ellen is a mid-to-late pool standalone doppelganger appropriate for nights 2–3. The business card aftermath is a narrative detail that lands after the decision point. The specialty mismatch is the primary hard flag and is findable by cross-referencing the NPI database against the stated condition.
+
+---
+
+### NPC 09 — Carl Dunbar
+
+**NAME:** Carl Dunbar
+**AGE:** 71
+**CONTEXT:** Retired postal carrier. Tuesday regular for 15+ years. Came in at his usual time.
+
+**PRESCRIPTION**
+- Drug and dose: Warfarin 5mg
+- Quantity: 30 tablets
+- Refills: Ongoing maintenance
+- Prescriber: Dr. Ruth Ellison, GP — NPI 2345678901
+- Prescriber specialty: General practice
+- Condition: Atrial fibrillation, anticoagulation management
+
+**QUIRK**
+- Primary: Always comments on the weather, even when there's nothing to say. "Cold out today." "Nice enough, I suppose." A ritual more than a observation.
+- Secondary: Briefly complains about how mail runs work now compared to when he did the route. Has a specific grievance each time — different grievance, same energy.
+- Shelf purchase: A newspaper or a TV Guide, whichever is closer to the door.
+
+**DOPPELGANGER-ELIGIBLE:** Yes
+
+---
+
+**DOPPELGANGER VERSION OF: Carl Dunbar**
+
+**SWAPPED PRESCRIPTION DETAILS**
+- Prescriber changed from Dr. Ruth Ellison (NPI 2345678901) to Dr. Marcus Webb, GP (NPI 3456789012) — no transfer note
+- Fill history for warfarin is missing — a patient on long-term anticoagulation for atrial fibrillation would have years of continuous, closely monitored fill records
+
+**WHAT THE QUIRK GETS WRONG**
+- Missing: No weather comment
+- Missing: No complaint about the mail
+- Missing: Does not buy a newspaper
+- Present: Says he "stops in sometimes" when asked if he's a regular — doesn't claim the 15-year history, just doesn't deny being familiar with the place
+
+**ADDITIONAL FLAGS:** Missing fill history is the secondary hard flag — requires knowing that warfarin patients need continuous INR monitoring and refills
+
+**FLAG DIFFICULTY:** Medium-Subtle — prescriber change is the primary flag; missing fill history requires the player to know that anticoagulation patients don't have gaps in their records; behavioral tell requires having seen the real Carl first
+
+**AFTERMATH:** Standard.
+
+**DESIGN NOTES:** Do not assign the doppelganger version until the human version has appeared at least once in this playthrough. The missing fill history is the most subtle element and rewards players who understand what warfarin management looks like. Carl's doppelganger is the hardest of the doppelganger-eligible alternates in this batch — appropriate for later nights.
+
+---
+
+### NPC 10 — Becca Stinson
+
+**NAME:** Becca Stinson
+**AGE:** 28
+**CONTEXT:** Registered nurse at the hospital three blocks away. Just finished a shift. Still in scrubs, badge clipped to her chest. Stopped in on the way to her car.
+
+**PRESCRIPTION**
+- Drug and dose: Sertraline 50mg
+- Quantity: 30 tablets
+- Refills: 5 remaining
+- Prescriber: Dr. Helen Okafor, Psychiatry — NPI 8899001122
+- Prescriber specialty: Psychiatry
+- Condition: Depression / anxiety, managed
+
+**QUIRK**
+- Primary: Efficient, not rude. Presents everything before being asked. If there's any hesitation on the player's part, she says "I know how this works" — gently, not unkindly. She's filled prescriptions for patients all day. She knows the drill.
+- Shelf purchase: Nothing. She has a bag over one shoulder and she's going home.
+
+**DOPPELGANGER-ELIGIBLE:** No
+
+**DESIGN NOTES:** Becca is a deliberate false positive bait. Her prescription (sertraline from a psychiatrist) is entirely appropriate — this is exactly what that drug class looks like on a legitimate prescription. Her impatience is occupational, not suspicious. The player who flags her because she seems "too confident" or because they're uncomfortable with the medication type has made an error. Design intent: teach the player to check the paperwork, not the affect.
+
+---
+
+### NPC 11 — Frank Delaney
+
+**NAME:** Frank Delaney
+**NIGHT:** 1
+**QUEUE POSITION:** 3–4 (third or fourth customer of the first shift)
+
+**FABRICATED PRESCRIPTION**
+- Drug and dose: Hydrocodone/Acetaminophen 10/325mg
+- Quantity: 30 tablets
+- Prescriber: Dr. Frank Delaney — NPI 9900112233
+- Prescriber specialty: General practice (his own active NPI — the prescriber and patient names are identical)
+
+**FLAGS**
+- Hard flag: Physician self-prescribing a Schedule II controlled substance — auto-surfaced by the computer without requiring cross-reference. The prescriber name matches the patient name.
+- Soft tell: Warm, confident, over-prepared. Volunteers the explanation before the player has looked anything up. Uses the word "documented" twice. His white coat is folded over the counter.
+- Total flag count: 1 hard (auto-surfaced) + 1 soft
+- Flag difficulty: Easy — auto-surfaced, no active checking required
+
+**BEHAVIOR:** Friendly and slightly self-deprecating. "I know how it looks — believe me, I do." Explains that his usual prescribing partner is on vacation, that he has documentation, that this is not his habit, and that he would never do this with anything that mattered. Everything is "documented." He is the most reasonable-sounding person you've talked to all night.
+
+**AFTERMATH:** His white coat stays folded on the counter after. It is the only thing left. There is no name embroidered on it.
+
+**NARRATIVE PURPOSE:** Frank is the second authored tutorial NPC on night 1 (Karen Holt being the first). Where Karen teaches that a warm demeanor is not verification, Frank teaches the corollary: credentials and a good explanation are also not verification. He is a doctor. He sounds right. The paperwork says no. His aftermath — the coat with no name — is the first image in the game that does not have an explanation, and is not meant to.
+
+**DESIGN NOTES:** Must appear in queue position 3 or 4 on night 1. Late enough that the player has processed Karen and one or two normal NPCs first. Frank's warmth must not feel like a trick — it is genuine. He believes his explanation. The game is not asking the player to decide if Frank is a bad person. It is asking them to read the flag on the screen and act accordingly. The nameless coat is a deliberate loose thread.

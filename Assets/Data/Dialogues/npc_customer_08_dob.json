@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_08_dob",
+    "speakerName": "Ellen",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth. September fourteenth, nineteen sixty-eight.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches the ID.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you confirm the year?",
+                    "nextNodeId": "confirm_year"
+                }
+            ]
+        },
+        {
+            "id": "confirm_year",
+            "text": "Nineteen sixty-eight.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Is there anything else you need to verify?",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -1,0 +1,80 @@
+{
+    "dialogueId": "npc_customer_08",
+    "speakerName": "Ellen",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Good afternoon. I've been meaning to switch to a local pharmacy for some time now. I usually go to the chain across town, but a neighbor mentioned this one. I'd like to fill a prescription.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Welcome. What medication are we filling?",
+                    "nextNodeId": "medication"
+                },
+                {
+                    "text": "Happy to help. I'll need to see the prescription and your ID.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "medication",
+            "text": "Hydrocodone. For my knee. I had surgery several years ago and the pain has been chronic since. Dr. Manders manages it.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Can you tell me Dr. Manders' specialty?",
+                    "nextNodeId": "specialty"
+                },
+                {
+                    "text": "I'll need to look up the prescriber. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "specialty",
+            "text": "He's been my doctor for the knee for a long time.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "What type of practice is he in?",
+                    "nextNodeId": "specialty_deflect"
+                },
+                {
+                    "text": "The prescription will have his NPI. Let me look it up.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "specialty_deflect",
+            "text": "I'd need to check. He handles several things for me.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll verify through the database. ID, please.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Of course. Here you are.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Thank you. One moment while I verify.",
+                    "nextNodeId": "end_checking"
+                }
+            ]
+        },
+        {
+            "id": "end_checking",
+            "text": "Take your time. I'm in no hurry.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

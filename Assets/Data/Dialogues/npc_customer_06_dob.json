@@ -1,0 +1,39 @@
+{
+    "dialogueId": "npc_customer_06_dob",
+    "speakerName": "Sandra",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Date of birth? February ninth, seventy-nine. I only remember it so clearly because one of my students shares the same birthday and she makes a cake every year. It's very sweet.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you confirm the full year?",
+                    "nextNodeId": "full_year"
+                }
+            ]
+        },
+        {
+            "id": "full_year",
+            "text": "Nineteen seventy-nine. February ninth. The year I have feelings about is the one coming up, not the one on the ID.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. We're all confirmed.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Wonderful. See — even in a bad week, some things still work out.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

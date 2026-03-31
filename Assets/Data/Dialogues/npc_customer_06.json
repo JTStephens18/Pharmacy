@@ -1,0 +1,76 @@
+{
+    "dialogueId": "npc_customer_06",
+    "speakerName": "Sandra",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hi, sorry — here, let me just — *a sheaf of papers slides off the counter* Oh god. Sorry. I'm Sandra Kowalski. Monthly pickup. Ignore the chaos.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "No trouble at all. Monthly pickup for Kowalski?",
+                    "nextNodeId": "confirm_name"
+                },
+                {
+                    "text": "Busy day?",
+                    "nextNodeId": "busy_day"
+                }
+            ]
+        },
+        {
+            "id": "confirm_name",
+            "text": "That's me. The metformin. Sandra Kowalski, K-O-W-A-L-S-K-I. I never know if there's an H in there and there isn't.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Got it. I'll need your ID.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "busy_day",
+            "text": "End of semester. I have forty-three sets of papers due by Friday and I am not making that deadline. One of my kids turned in a book report on a book they definitely didn't read and honestly? I respect the commitment. *gathers papers from counter*",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "How many kids do you teach?",
+                    "nextNodeId": "how_many"
+                },
+                {
+                    "text": "Let me get your prescription going. ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "how_many",
+            "text": "Twenty-seven this year. Usually it's closer to twenty-four but they combined two sections and I haven't forgiven the administration. I take the metformin in part because of that decision.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That's a lot. Can I see your ID?",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Yes — here — hold on, it's in here somewhere. *rummages in tote bag* Why do I have three different pens and no wallet. There. Oh, and can I grab some ibuprofen? The big bottle. For the headaches.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "It's in the third aisle. I'll start on your prescription.",
+                    "nextNodeId": "end_processing"
+                }
+            ]
+        },
+        {
+            "id": "end_processing",
+            "text": "Thank you. You're a saint. The kids say I complain too much about the grading but they don't know. They don't know.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

@@ -1,0 +1,86 @@
+{
+    "dialogueId": "npc_customer_10",
+    "speakerName": "Becca",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "Hi. Sertraline, fifty milligrams, Becca Stinson. Prescription should be called in already.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Let me check. I'll need your ID.",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "Tough shift?",
+                    "nextNodeId": "tough_shift"
+                }
+            ]
+        },
+        {
+            "id": "id_request",
+            "text": "Here. It's a hospital badge, not a driver's license — is that okay? No, wait, I have the actual ID. Sorry, force of habit.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "State ID is fine. Thank you.",
+                    "nextNodeId": "processing"
+                }
+            ]
+        },
+        {
+            "id": "tough_shift",
+            "text": "Twelve hours. Two admits, one discharge, and a code in the afternoon. I'm fine, I just want to go home.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I'll get you out of here fast. ID?",
+                    "nextNodeId": "id_request"
+                },
+                {
+                    "text": "You work at the hospital down the street?",
+                    "nextNodeId": "hospital"
+                }
+            ]
+        },
+        {
+            "id": "hospital",
+            "text": "Three blocks east. Seven years on the floor. I know how this part works — you're going to scan my ID, verify my date of birth, run the insurance, and I'll have it in ten minutes. I'm not in a rush. I just want to be done.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "You do know how it works. ID when you're ready.",
+                    "nextNodeId": "id_request"
+                }
+            ]
+        },
+        {
+            "id": "processing",
+            "text": "The prescription is from Dr. Okafor. Helen Okafor. Psychiatry. NPI is on the script. It's all legitimate — I know how it looks, an RN filling a psych prescription, but I just want to be clear that it's normal.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "I didn't assume otherwise. Let me run this through.",
+                    "nextNodeId": "end_neutral"
+                },
+                {
+                    "text": "Sertraline from psychiatry is completely routine.",
+                    "nextNodeId": "end_clear"
+                }
+            ]
+        },
+        {
+            "id": "end_neutral",
+            "text": "Good. Thank you.",
+            "speakerName": "",
+            "responses": []
+        },
+        {
+            "id": "end_clear",
+            "text": "I know. I just say it so we don't have to do the dance.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

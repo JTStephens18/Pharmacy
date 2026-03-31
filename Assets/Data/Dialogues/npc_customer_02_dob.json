@@ -1,0 +1,50 @@
+{
+    "dialogueId": "npc_customer_02_dob",
+    "speakerName": "Marlene",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "My date of birth? Oh, goodness. March fourteenth, nineteen fifty-seven. Pi Day! My students used to leave little pie charts on my desk. The math teachers thought they were very clever.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "That matches. Thank you, Marlene.",
+                    "nextNodeId": "end_match"
+                },
+                {
+                    "text": "Can you spell out the year for me?",
+                    "nextNodeId": "spell_out"
+                }
+            ]
+        },
+        {
+            "id": "spell_out",
+            "text": "Nineteen fifty-seven. I'm sixty-seven years old and I have never once been confused about it. Though I appreciate that you're being careful.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Everything matches. You're all set.",
+                    "nextNodeId": "end_match"
+                }
+            ]
+        },
+        {
+            "id": "end_match",
+            "text": "Of course it does. Same birthday I've had my whole life. Now, did you want to see my ID as well, or is that enough?",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "ID's already been scanned. We're good.",
+                    "nextNodeId": "end_close"
+                }
+            ]
+        },
+        {
+            "id": "end_close",
+            "text": "Efficient. I like that. You know, this really is a good pharmacy.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}

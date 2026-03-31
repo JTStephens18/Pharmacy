@@ -1,0 +1,54 @@
+{
+    "dialogueId": "npc_customer_08_address",
+    "speakerName": "Ellen",
+    "startNodeId": "start",
+    "nodes": [
+        {
+            "id": "start",
+            "text": "My address. Thirty-one Halcott Place.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "How long have you lived there?",
+                    "nextNodeId": "how_long"
+                },
+                {
+                    "text": "That matches the ID.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "how_long",
+            "text": "Some years now. It's a quiet neighborhood. I've found it suits me.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Any recent moves or change of address?",
+                    "nextNodeId": "moved"
+                },
+                {
+                    "text": "Address confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "moved",
+            "text": "No. I've been settled there for quite some time.",
+            "speakerName": "",
+            "responses": [
+                {
+                    "text": "Understood. That's confirmed.",
+                    "nextNodeId": "end_confirmed"
+                }
+            ]
+        },
+        {
+            "id": "end_confirmed",
+            "text": "Thank you.",
+            "speakerName": "",
+            "responses": []
+        }
+    ]
+}
