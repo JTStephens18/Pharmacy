@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b50830c5ac73b247beeb09286647373, type: 3}
   m_Name: DerekSolis_Identity
   m_EditorClassIdentifier: 
-  fullName: 
-  dateOfBirth: 
-  address: 
-  idNumber: 
+  fullName: Derek Solis
+  dateOfBirth: 06/14/1966
+  address: 2240 Birchwood, Apt 4
+  idNumber: 3
   photoSprite: {fileID: 0}
   idCardPhotoSprite: {fileID: 0}
   idCardName: 

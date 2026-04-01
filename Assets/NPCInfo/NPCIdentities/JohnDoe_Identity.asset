@@ -15,7 +15,7 @@ MonoBehaviour:
   fullName: John Doe
   dateOfBirth: 12/25/1977
   address: 111 Christmas Lane
-  idNumber: 1
+  idNumber: 2
   photoSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   idCardPhotoSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   idCardName: 
