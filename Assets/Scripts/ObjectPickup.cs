@@ -45,7 +45,6 @@ public class ObjectPickup : NetworkBehaviour
     private Door _currentDoor;
     private GunCase _currentGunCase;
     private PillFillingStation _currentFillingStation;
-    private HopperLoadButton _currentLoadButton;
 
     // ── Networked hold state ────────────────────────────────────────
     // When the held object is a NetworkObject we can't SetParent to the camera
@@ -80,7 +79,6 @@ public class ObjectPickup : NetworkBehaviour
         DetectDoor();
         DetectGunCase();
         DetectFillingStation();
-        DetectLoadButton();
 
         if (Input.GetKeyDown(interactKey))
         {
@@ -88,6 +86,12 @@ public class ObjectPickup : NetworkBehaviour
             if (_currentGunCase != null)
             {
                 _currentGunCase.TryInteract(this);
+            }
+            // Pill filling station: requires holding a medication bottle
+            else if (_currentFillingStation != null && !_currentFillingStation.IsActive
+                     && _heldObject != null && _heldObject.GetComponent<MedicationBottle>() != null)
+            {
+                _currentFillingStation.Activate(this);
             }
             else if (_heldObject == null)
             {
@@ -100,11 +104,6 @@ public class ObjectPickup : NetworkBehaviour
                 else if (_currentSortingStation != null && !_currentSortingStation.IsActive)
                 {
                     _currentSortingStation.Activate();
-                }
-                // Check for pill filling station
-                else if (_currentFillingStation != null && !_currentFillingStation.IsActive)
-                {
-                    _currentFillingStation.Activate();
                 }
                 // Check for ID card on counter (focus + barcode scan)
                 else if (_currentIDCard != null && !_currentIDCard.IsActive)
@@ -147,11 +146,6 @@ public class ObjectPickup : NetworkBehaviour
                     }
                     TryPickup();
                 }
-            }
-            // Check for hopper load button (holding medication bottle near filling station)
-            else if (_currentLoadButton != null)
-            {
-                _currentLoadButton.TryLoad(_heldObject, this);
             }
             // Check if we're in box-to-shelf placement mode
             else if (_playerComponents != null && _playerComponents.PlacementManager != null && _playerComponents.PlacementManager.IsPlacementReady())
@@ -230,6 +224,14 @@ public class ObjectPickup : NetworkBehaviour
                     RequestPickupServerRpc(netObj.NetworkObjectId);
                 else
                     PickupObject(hit.collider.gameObject, rb, hit.collider);
+            }
+            else if (rb != null)
+            {
+                Debug.Log($"[ObjectPickup] TryPickup BLOCKED: '{hit.collider.gameObject.name}' rb.isKinematic={rb.isKinematic}");
+            }
+            else
+            {
+                Debug.Log($"[ObjectPickup] TryPickup BLOCKED: '{hit.collider.gameObject.name}' has no Rigidbody");
             }
         }
     }
@@ -607,7 +609,7 @@ public class ObjectPickup : NetworkBehaviour
             if (item == null)
                 item = hit.collider.GetComponentInParent<InteractableItem>();
 
-            if (item != null)
+            if (item != null && item.enabled && item.IsDelivered)
             {
                 // Legacy path: item is parented to a CounterSlot (non-networked)
                 CounterSlot parentSlot = item.transform.parent?.GetComponent<CounterSlot>();
@@ -1015,37 +1017,11 @@ public class ObjectPickup : NetworkBehaviour
         _currentFillingStation = newStation;
     }
 
-    private void DetectLoadButton()
-    {
-        HopperLoadButton newButton = null;
-
-        if (_heldObject != null)
-        {
-            Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
-
-            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayerMask))
-            {
-                newButton = hit.collider.GetComponent<HopperLoadButton>();
-                if (newButton == null)
-                    newButton = hit.collider.GetComponentInParent<HopperLoadButton>();
-            }
-        }
-
-        // Handle highlight changes
-        if (newButton != _currentLoadButton)
-        {
-            if (_currentLoadButton != null) _currentLoadButton.ShowHighlight(false);
-            if (newButton != null) newButton.ShowHighlight(true);
-        }
-
-        _currentLoadButton = newButton;
-    }
-
     // ── Consume Held Object ─────────────────────────────────────────
 
     /// <summary>
     /// Destroys the currently held object and clears hold state.
-    /// Used by HopperLoadButton when medication is poured into the hopper.
+    /// Used by PillFillingStation to consume the medication bottle on activation.
     /// For NetworkObjects, despawns via the server.
     /// </summary>
     public void ConsumeHeldObject()

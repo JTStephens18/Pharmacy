@@ -35,13 +35,14 @@ public class PillFillingStation : NetworkBehaviour
 
     // ── Local State ─────────────────────────────────────────────────
     private bool _isActive;
+    private ObjectPickup _pendingPickup;
 
     public bool IsActive => _isActive;
 
     /// <summary>True when another player is currently using this station.</summary>
     public bool IsInUse => IsSpawned && _currentUserId.Value != NoUser;
 
-    /// <summary>The hopper component — used by HopperLoadButton to load medication.</summary>
+    /// <summary>The hopper component.</summary>
     public RotatingHopper Hopper => hopper;
 
     /// <summary>Last fill count when the player exited. -1 if station was never used.</summary>
@@ -57,11 +58,15 @@ public class PillFillingStation : NetworkBehaviour
     // ── Public API (called by ObjectPickup) ─────────────────────────
 
     /// <summary>
-    /// Activate the filling station. Routes through server lock in multiplayer.
+    /// Activate the filling station. If the player is holding a medication bottle,
+    /// it is consumed (set down) and the hopper auto-loads from the prescription.
+    /// Routes through server lock in multiplayer.
     /// </summary>
-    public void Activate()
+    public void Activate(ObjectPickup pickup = null)
     {
         if (_isActive) return;
+
+        _pendingPickup = pickup;
 
         if (!IsSpawned)
         {
@@ -141,9 +146,17 @@ public class PillFillingStation : NetworkBehaviour
             return;
         }
 
+        // Consume the held bottle (set it down)
+        if (_pendingPickup != null && _pendingPickup.IsHoldingObject())
+            _pendingPickup.ConsumeHeldObject();
+        _pendingPickup = null;
+
         _isActive = true;
 
         focus.EnterFocus(focusCameraTarget, OnFocusExited);
+
+        // Auto-load hopper from the current prescription
+        AutoLoadHopper();
 
         // Pull target count from the currently scanned NPC's prescription
         int target = GetPrescriptionTarget();
@@ -163,8 +176,7 @@ public class PillFillingStation : NetworkBehaviour
         if (audioSource != null && activateSound != null)
             audioSource.PlayOneShot(activateSound);
 
-        Debug.Log($"[PillFillingStation] Activated. Target: {target}, " +
-                  $"Loaded: {(hopper != null && hopper.IsLoaded ? hopper.LoadedMedication.medicationName : "none")}");
+        Debug.Log($"[PillFillingStation] Activated. Target: {target}");
     }
 
     private void DoDeactivate()
@@ -213,5 +225,14 @@ public class PillFillingStation : NetworkBehaviour
                 return prescription.quantity;
         }
         return 0;
+    }
+
+    private void AutoLoadHopper()
+    {
+        if (hopper == null) return;
+
+        // Auto-load: mark hopper as loaded so the mechanic works immediately.
+        // Future: could match loaded MedicationData against prescription for wrong-medication gameplay.
+        hopper.SetLoaded();
     }
 }

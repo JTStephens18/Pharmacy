@@ -49,6 +49,7 @@ public class DispensingController : MonoBehaviour
     private bool _gateOpen;
     private bool _isActive;
     private bool _isFlowing;
+    private float _debugLogTimer;
 
     public int CurrentCount => _currentCount;
     public int TargetCount => _targetCount;
@@ -68,11 +69,14 @@ public class DispensingController : MonoBehaviour
         _gateOpen = false;
         _isFlowing = false;
         _isActive = true;
+        _debugLogTimer = 0f;
+        Debug.Log($"[DispensingController] Initialized. Target: {targetCount}, MaxFlowRate: {maxFlowRate}");
     }
 
     /// <summary>Stop accepting input and close the gate.</summary>
     public void Shutdown()
     {
+        Debug.Log($"[DispensingController] Shutdown. Final count: {_currentCount}/{_targetCount}");
         _isActive = false;
         if (_gateOpen)
         {
@@ -94,6 +98,7 @@ public class DispensingController : MonoBehaviour
         {
             _gateOpen = wantOpen;
             OnGateStateChanged?.Invoke(_gateOpen);
+            Debug.Log($"[DispensingController] Gate {(_gateOpen ? "OPENED" : "CLOSED")} | Count: {_currentCount}/{_targetCount}");
         }
 
         // Flow calculation
@@ -109,12 +114,26 @@ public class DispensingController : MonoBehaviour
             float flowRate = maxFlowRate * Mathf.Cos(normalizedPos * Mathf.PI * 0.5f);
             _pillAccumulator += flowRate * Time.deltaTime;
 
-            if (!_isFlowing) StartFlowAudio();
+            if (!_isFlowing)
+            {
+                StartFlowAudio();
+                Debug.Log($"[DispensingController] Flow STARTED — spout in window (normPos: {normalizedPos:F2}, flowRate: {flowRate:F1} pills/s)");
+            }
+
+            // Periodic debug log while flowing (every 0.5s)
+            _debugLogTimer += Time.deltaTime;
+            if (_debugLogTimer >= 0.5f)
+            {
+                _debugLogTimer = 0f;
+                Debug.Log($"[DispensingController] Flowing — angle: {hopper.SpoutAngle:F1}° | normPos: {normalizedPos:F2} | rate: {flowRate:F1}/s | count: {_currentCount}/{_targetCount} | accum: {_pillAccumulator:F2}");
+            }
 
             while (_pillAccumulator >= 1f)
             {
                 _pillAccumulator -= 1f;
                 _currentCount++;
+
+                Debug.Log($"[DispensingController] +1 pill dispensed! Count: {_currentCount}/{_targetCount}");
 
                 if (pillTickClip != null && audioSource != null)
                     audioSource.PlayOneShot(pillTickClip, 0.3f);
@@ -123,6 +142,7 @@ public class DispensingController : MonoBehaviour
 
                 if (_targetCount > 0 && _currentCount >= _targetCount)
                 {
+                    Debug.Log($"[DispensingController] TARGET REACHED! {_currentCount}/{_targetCount}");
                     OnTargetReached?.Invoke();
                     break;
                 }
@@ -130,7 +150,11 @@ public class DispensingController : MonoBehaviour
         }
         else
         {
-            if (_isFlowing) StopFlowAudio();
+            if (_isFlowing)
+            {
+                StopFlowAudio();
+                Debug.Log($"[DispensingController] Flow STOPPED — spout outside window (angle: {hopper.SpoutAngle:F1}°)");
+            }
         }
     }
 

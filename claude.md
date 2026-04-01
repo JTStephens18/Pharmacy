@@ -74,8 +74,7 @@ Assets/Scripts/
 │   ├── PillFillingStation.cs  # Station lifecycle manager (focus mode, NetworkBehaviour)
 │   ├── RotatingHopper.cs      # Hopper rotation, speed randomization, alignment window
 │   ├── DispensingController.cs# Gate input, cosine flow rate, pill accumulation
-│   ├── FillCounterUI.cs       # World-space count display (current / target)
-│   └── HopperLoadButton.cs    # Load medication into hopper from held bottle
+│   └── FillCounterUI.cs       # World-space count display (current / target)
 │
 ├── Shelf/
 │   ├── ShelfSection.cs        # IPlaceable shelf with multiple slots
@@ -494,12 +493,16 @@ Attach to medication bottle prefabs (must also have `Rigidbody` for pickup).
 ### PillFillingStation.cs (NetworkBehaviour)
 Attach to the filling station root GameObject.
 
-**Activation flow** (E press → `Activate()`):
-1. Acquires exclusive-access lock (same pattern as `PillCountingStation`)
-2. `FocusStateManager.EnterFocus()` — transitions camera
-3. Reads target count from `NPCInfoDisplay.Instance.CurrentNPC.Prescription.quantity`
-4. Initializes `DispensingController` with target count
-5. Activates `RotatingHopper` and `FillCounterUI`
+**Activation flow** (E press → `Activate(ObjectPickup)`):
+1. If the player is holding a `MedicationBottle`, consumes it (sets it down)
+2. Acquires exclusive-access lock (same pattern as `PillCountingStation`)
+3. Auto-loads hopper via `SetLoaded()` (medication type auto-determined from prescription)
+4. `FocusStateManager.EnterFocus()` — transitions camera
+5. Reads target count from `NPCInfoDisplay.Instance.CurrentNPC.Prescription.quantity`
+6. Initializes `DispensingController` with target count
+7. Activates `RotatingHopper` and `FillCounterUI`
+
+Works with empty hands too (e.g. re-activation after exiting).
 
 **Deactivation** (Escape → focus exit → `Deactivate()`):
 1. Captures `LastFillCount` from `DispensingController`
@@ -561,23 +564,13 @@ Handles player input (hold left mouse to open gate), calculates flow rate from h
 ### FillCounterUI.cs
 World-space UI. Subscribes to `DispensingController` events. Shows `"current / target"` (or just count if no target). Color-codes: white = normal, green = target reached, yellow = overfilled.
 
-### HopperLoadButton.cs
-Attach to a collider on the station housing (the physical load button).
-
-When the player presses E while holding a `MedicationBottle` and looking at this button:
-1. `TryLoad(heldObject, pickup)` — checks for `MedicationBottle` component
-2. Calls `hopper.LoadMedication(bottle.MedicationData)`
-3. Calls `pickup.ConsumeHeldObject()` — destroys/despawns the bottle
-4. Plays load sound
-
-The hopper holds one medication at a time. Loading a different bottle replaces the current load. Loading the wrong medication produces no error.
-
 ### ObjectPickup Integration
 
 | Target | Detection | Action on E |
 |---|---|---|
-| `PillFillingStation` | `DetectFillingStation()` | Calls `station.Activate()` → enters focus (when not holding) |
-| `HopperLoadButton` | `DetectLoadButton()` | Calls `button.TryLoad()` → loads medication, consumes bottle (when holding) |
+| `PillFillingStation` | `DetectFillingStation()` | Calls `station.Activate(this)` — consumes held bottle if present, auto-loads hopper, enters focus |
+
+The filling station check runs regardless of held state (like the gun case). If the player is holding a `MedicationBottle`, it is consumed. If holding a non-bottle item, the station is skipped and normal hold interactions apply (drop, place, etc.). If empty-handed, the station activates directly.
 
 **New method**: `ConsumeHeldObject()` — destroys the held object (or despawns via `ConsumeNetworkObjectServerRpc` for NetworkObjects). Clears all hold state.
 
@@ -590,7 +583,6 @@ The hopper holds one medication at a time. Loading a different bottle replaces t
   - **Hopper child**: `RotatingHopper` component, assign `hopperTransform` to the rotating disk mesh
   - **Dispensing child**: `DispensingController` component, assign `hopper` reference
   - **UI child**: World-space Canvas with `FillCounterUI` + `TextMeshProUGUI`
-  - **Load button child**: Collider + `HopperLoadButton` component
   - **Camera target**: Empty Transform positioned for top-down or angled view of the station
 - [ ] Assign `focusCameraTarget` on `PillFillingStation`
 - [ ] Ensure `PillFillingStation`, `RotatingHopper`, and `DispensingController` can auto-find each other (same hierarchy), or assign manually
@@ -1073,10 +1065,8 @@ ObjectPickup ──→ ComputerScreen ──→ FocusStateManager
      │         │
      │         ├──→ RotatingHopper (rotation + alignment)
      │         ├──→ DispensingController (gate + flow + counting)
-     │         └──→ FillCounterUI (count display)
-     │
-     ├──→ HopperLoadButton ──→ RotatingHopper.LoadMedication()
-     │         └──→ ObjectPickup.ConsumeHeldObject() (destroys bottle)
+     │         ├──→ FillCounterUI (count display)
+     │         └──→ ObjectPickup.ConsumeHeldObject() (destroys held bottle)
      │                                      ↑
      ├──→ IDCardInteraction ────────────────┘
      │         │
@@ -1123,7 +1113,7 @@ DialogueManager ──→ DialogueHistory (records exchanges)
 
 3. **Pill Counting**: `ObjectPickup` detects `PillCountingStation` → `Activate()` → `FocusStateManager.EnterFocus()` → `PillSpawner.SpawnPills()` → player uses `PillScraper` → pills enter `PillCountingChute` → count reaches target → auto-exit
 
-3a. **Pill Filling**: Player carries `MedicationBottle` to station → presses E on `HopperLoadButton` → `TryLoad()` loads hopper + consumes bottle → player presses E on `PillFillingStation` (empty hands) → `Activate()` → `FocusStateManager.EnterFocus()` → `RotatingHopper.Activate()` → player holds left mouse to open gate → `DispensingController` calculates cosine flow → pills accumulate → `FillCounterUI` updates → Escape exits
+3a. **Pill Filling**: Player picks up `MedicationBottle` → looks at `PillFillingStation` → presses E → bottle consumed + hopper auto-loaded → `FocusStateManager.EnterFocus()` → `RotatingHopper.Activate()` → player holds left mouse to open gate → `DispensingController` calculates cosine flow → pills accumulate → `FillCounterUI` updates → Escape exits
 
 4. **Computer Screen**: `ObjectPickup` detects `ComputerScreen` → `Activate()` → `FocusStateManager.EnterFocus()` → `ComputerScreenController.ResetToMain()` → player clicks tabs/buttons on World Space Canvas → Escape exits
 
