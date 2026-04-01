@@ -1436,6 +1436,8 @@ MonoBehaviour:
   hopper: {fileID: 386208244}
   dispensingController: {fileID: 223994885}
   counterUI: {fileID: 0}
+  bottleOutputPoint: {fileID: 813614753}
+  fallbackTargetCount: 30
   audioSource: {fileID: 0}
   activateSound: {fileID: 0}
 --- !u!4 &356380277
@@ -1457,6 +1459,7 @@ Transform:
   - {fileID: 588590560}
   - {fileID: 1630440507}
   - {fileID: 1560462775}
+  - {fileID: 813614753}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &376485507
@@ -1615,7 +1618,7 @@ MonoBehaviour:
   hopperTransform: {fileID: 386208245}
   rotationAxis: {x: 1, y: 0, z: 0}
   minSpeed: 50
-  maxSpeed: 400
+  maxSpeed: 200
   minChangeInterval: 3
   maxChangeInterval: 8
   speedTransitionDuration: 1
@@ -3411,6 +3414,37 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 933811856}
   m_SourcePrefab: {fileID: 100100000, guid: 97af2d75ab000fe448a2bf4acbbd75df, type: 3}
+--- !u!1 &813614752
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 813614753}
+  m_Layer: 0
+  m_Name: BottleOutputTransform
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &813614753
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 813614752}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.884, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 356380277}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -9698,7 +9732,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7139779233072005102, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.692
+      value: -1.697
       objectReference: {fileID: 0}
     - target: {fileID: 7139779233072005102, guid: 8454abc352cc871479764ec1f93a4f0b, type: 3}
       propertyPath: m_LocalRotation.w

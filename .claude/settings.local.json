@@ -6,7 +6,8 @@
       "Bash(find /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets/Prefabs -type f -name *.prefab)",
       "Bash(find /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets -name *.prefab)",
       "Bash(grep -i \"\\\\.cs$\")",
-      "Bash(wc -l /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets/Scripts/*.cs)"
+      "Bash(wc -l /c/Users/JTSte/Unity/Pharmacy/Pharmacy/Assets/Scripts/*.cs)",
+      "Bash(find \"c:/Users/JTSte/Unity/Pharmacy/Pharmacy\" -name \"*.meta\" -exec grep -l \"d5a57f767e5e46a458fc5d3c628d0cbb\" {} \\\\;)"
     ]
   }
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -21,6 +22,11 @@ public class PillFillingStation : NetworkBehaviour
     [SerializeField] private DispensingController dispensingController;
     [SerializeField] private FillCounterUI counterUI;
 
+    [Tooltip("Where the bottle sits while pills are being dispensed.")]
+    [SerializeField] private Transform bottleOutputPoint;
+    [Tooltip("Used when no NPC prescription is loaded (e.g. testing). 0 = count-only mode.")]
+    [SerializeField] private int fallbackTargetCount = 30;
+
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip activateSound;
@@ -36,6 +42,8 @@ public class PillFillingStation : NetworkBehaviour
     // ── Local State ─────────────────────────────────────────────────
     private bool _isActive;
     private ObjectPickup _pendingPickup;
+    private MedicationBottle _activeBottle;
+    private ObjectPickup _activePickup;
 
     public bool IsActive => _isActive;
 
@@ -116,6 +124,13 @@ public class PillFillingStation : NetworkBehaviour
         _currentUserId.Value = NoUser;
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    private void DestroyBottleServerRpc(ulong networkObjectId)
+    {
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+            netObj.Despawn(true);
+    }
+
     /// <summary>
     /// Server-only: force-releases the lock if held by the given client (e.g. on disconnect).
     /// </summary>
@@ -146,9 +161,17 @@ public class PillFillingStation : NetworkBehaviour
             return;
         }
 
-        // Consume the held bottle (set it down)
+        // Place the bottle at the output point and store both it and the pickup reference.
+        // On fill completion the bottle is returned directly to the player's hand.
+        _activeBottle = null;
+        _activePickup = _pendingPickup;
         if (_pendingPickup != null && _pendingPickup.IsHoldingObject())
-            _pendingPickup.ConsumeHeldObject();
+        {
+            Vector3    pos = bottleOutputPoint != null ? bottleOutputPoint.position : transform.position;
+            Quaternion rot = bottleOutputPoint != null ? bottleOutputPoint.rotation : Quaternion.identity;
+            GameObject placed = _pendingPickup.PlaceHeldObjectAt(pos, rot);
+            _activeBottle = placed != null ? placed.GetComponent<MedicationBottle>() : null;
+        }
         _pendingPickup = null;
 
         _isActive = true;
@@ -162,7 +185,10 @@ public class PillFillingStation : NetworkBehaviour
         int target = GetPrescriptionTarget();
 
         if (dispensingController != null)
+        {
+            dispensingController.OnTargetReached += OnFillTargetReached;
             dispensingController.Initialize(target);
+        }
 
         if (counterUI != null)
         {
@@ -183,12 +209,27 @@ public class PillFillingStation : NetworkBehaviour
     {
         // Capture the fill count before resetting
         if (dispensingController != null)
+        {
             LastFillCount = dispensingController.CurrentCount;
-
-        _isActive = false;
-
-        if (dispensingController != null)
+            dispensingController.OnTargetReached -= OnFillTargetReached;
             dispensingController.Shutdown();
+        }
+
+        // If the bottle is still at the output point (player exited early), destroy it.
+        // DelayedComplete clears _activeBottle before calling Deactivate so this only
+        // fires on early exits, not normal completions.
+        if (_activeBottle != null)
+        {
+            NetworkObject netObj = _activeBottle.GetComponent<NetworkObject>();
+            if (netObj != null && netObj.IsSpawned)
+                DestroyBottleServerRpc(netObj.NetworkObjectId);
+            else
+                Destroy(_activeBottle.gameObject);
+        }
+
+        _activeBottle = null;
+        _activePickup = null;
+        _isActive = false;
 
         if (hopper != null)
             hopper.Deactivate();
@@ -214,6 +255,37 @@ public class PillFillingStation : NetworkBehaviour
         Deactivate();
     }
 
+    private void OnFillTargetReached()
+    {
+        if (_activeBottle != null)
+            _activeBottle.SetFilled();
+
+        StartCoroutine(DelayedComplete(0f));
+    }
+
+    private IEnumerator DelayedComplete(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // Return the filled bottle to the player's hand before exiting focus.
+        // Clear _activeBottle first so DoDeactivate doesn't treat it as an abandoned bottle.
+        if (_activeBottle != null && _activePickup != null)
+        {
+            ObjectPickup pickup = _activePickup;
+            MedicationBottle bottle = _activeBottle;
+            _activeBottle = null;
+            _activePickup = null;
+            pickup.ForcePickup(bottle.gameObject);
+        }
+        else
+        {
+            _activeBottle = null;
+            _activePickup = null;
+        }
+
+        Deactivate();
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     private int GetPrescriptionTarget()
@@ -221,10 +293,10 @@ public class PillFillingStation : NetworkBehaviour
         if (NPCInfoDisplay.Instance != null && NPCInfoDisplay.Instance.CurrentNPC != null)
         {
             var prescription = NPCInfoDisplay.Instance.CurrentNPC.Prescription;
-            if (prescription != null)
+            if (prescription != null && prescription.quantity > 0)
                 return prescription.quantity;
         }
-        return 0;
+        return fallbackTargetCount;
     }
 
     private void AutoLoadHopper()

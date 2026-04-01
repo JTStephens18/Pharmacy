@@ -87,9 +87,11 @@ public class ObjectPickup : NetworkBehaviour
             {
                 _currentGunCase.TryInteract(this);
             }
-            // Pill filling station: requires holding a medication bottle
+            // Pill filling station: requires holding an unfilled medication bottle
             else if (_currentFillingStation != null && !_currentFillingStation.IsActive
-                     && _heldObject != null && _heldObject.GetComponent<MedicationBottle>() != null)
+                     && _heldObject != null
+                     && _heldObject.GetComponent<MedicationBottle>() is MedicationBottle bottle
+                     && !bottle.IsFilled)
             {
                 _currentFillingStation.Activate(this);
             }
@@ -986,6 +988,32 @@ public class ObjectPickup : NetworkBehaviour
         return _heldObject;
     }
 
+    /// <summary>
+    /// Programmatically picks up a specific object without requiring a raycast.
+    /// Used by PillFillingStation to return the filled bottle to the player's hand.
+    /// Only works for local (non-NetworkObject) objects.
+    /// </summary>
+    public void ForcePickup(GameObject obj)
+    {
+        if (obj == null || _heldObject != null) return;
+
+        Rigidbody rb = obj.GetComponent<Rigidbody>();
+        if (rb == null) return;
+
+        Collider col = obj.GetComponentInChildren<Collider>(true);
+
+        NetworkObject netObj = obj.GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            _heldNetworkObject = netObj;
+            DoNetworkPickup(obj, rb, col);
+        }
+        else
+        {
+            PickupObject(obj, rb, col);
+        }
+    }
+
     // Force drop (can be called externally if needed, e.g. by InventoryBox.ShrinkAndDestroy)
     public void ForceDropObject()
     {
@@ -1058,5 +1086,56 @@ public class ObjectPickup : NetworkBehaviour
     {
         if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
             netObj.Despawn(true);
+    }
+
+    /// <summary>
+    /// Releases the held object to a specific world position/rotation without destroying it.
+    /// The Rigidbody is left kinematic so the object stays put until SetFilled() re-enables physics.
+    /// Returns the released GameObject, or null if nothing was held.
+    /// </summary>
+    public GameObject PlaceHeldObjectAt(Vector3 worldPosition, Quaternion worldRotation)
+    {
+        if (_heldObject == null) return null;
+
+        GameObject obj = _heldObject;
+
+        // Clear hold state first
+        _heldObject          = null;
+        _isHoldingInventoryBox = false;
+
+        if (_heldNetworkObject != null)
+        {
+            // Network path: owner-authoritative, so setting position directly replicates via ClientNetworkTransform.
+            obj.transform.SetPositionAndRotation(worldPosition, worldRotation);
+
+            if (_heldCollider != null) _heldCollider.enabled = true;
+            // Rigidbody stays kinematic/no-gravity (set during pickup); don't alter it here.
+
+            _heldNetworkObject = null;
+            _heldRigidbody     = null;
+            _heldCollider      = null;
+            return obj;
+        }
+
+        // Unparent, restore scale, move to target
+        obj.transform.SetParent(null);
+        obj.transform.localScale = _heldObjectOriginalScale;
+        obj.transform.SetPositionAndRotation(worldPosition, worldRotation);
+
+        // Re-enable collider, but keep kinematic so it sits still during filling
+        if (_heldCollider != null)
+            _heldCollider.enabled = true;
+
+        if (_heldRigidbody != null)
+        {
+            _heldRigidbody.linearVelocity  = Vector3.zero;
+            _heldRigidbody.angularVelocity = Vector3.zero;
+            _heldRigidbody.isKinematic     = true;
+            _heldRigidbody.useGravity      = false;
+        }
+
+        _heldRigidbody = null;
+        _heldCollider  = null;
+        return obj;
     }
 }
