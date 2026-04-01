@@ -1,58 +1,37 @@
 {
     "dialogueId": "npc_customer_01_dob",
-    "speakerName": "Customer",
+    "speakerName": "Derek Solis",
     "startNodeId": "start",
     "nodes": [
         {
             "id": "start",
-            "text": "You need to verify my date of birth?",
+            "text": "Date of birth? Sure — June 14th, 1966. It's on the card.",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "Yes, can you confirm it for me please?",
-                    "nextNodeId": "confirm"
-                },
-                {
-                    "text": "Just a routine check, it's standard procedure.",
-                    "nextNodeId": "routine"
-                }
-            ]
-        },
-        {
-            "id": "confirm",
-            "text": "Sure, it should match what's on my ID card. Go ahead and check.",
-            "speakerName": "",
-            "responses": [
-                {
-                    "text": "That matches, thank you.",
+                    "text": "That matches. Thank you.",
                     "nextNodeId": "end_match"
                 },
                 {
-                    "text": "Hmm, the date doesn't seem to match our records.",
+                    "text": "The date on file doesn't match.",
                     "nextNodeId": "mismatch"
                 }
             ]
         },
         {
-            "id": "routine",
-            "text": "No problem, I understand. Everything should be in order.",
-            "speakerName": "",
-            "responses": []
-        },
-        {
             "id": "mismatch",
-            "text": "That's odd... Are you sure? I've had that same ID for years. Let me take another look.",
+            "text": "What? That's my birthday — June 14th, 1966. Is there a typo somewhere? The urgent care filled in the paperwork themselves.",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "You're right, my mistake. It does match after all.",
+                    "text": "You're right, I misread. It matches.",
                     "nextNodeId": "end_match"
                 }
             ]
         },
         {
             "id": "end_match",
-            "text": "Great, glad that's sorted. Anything else you need?",
+            "text": "Okay, good. Anything else or are we good?",
             "speakerName": "",
             "responses": []
         }

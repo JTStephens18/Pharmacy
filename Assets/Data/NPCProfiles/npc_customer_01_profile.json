@@ -1,0 +1,32 @@
+{
+    "npcId": "npc_customer_01",
+    "npcNumber": 1,
+    "type": "real",
+    "doppelgangerEligible": false,
+
+    "identity": {
+        "fullName": "Derek Solis",
+        "dateOfBirth": "06/14/1966",
+        "address": "2240 Birchwood, Apartment 4",
+        "idNumber": "1001",
+        "photoSprite": "",
+        "idCardName": "",
+        "idCardPhotoSprite": ""
+    },
+
+    "prescription": {
+        "medicationName": "Naproxen 500mg",
+        "quantity": 20,
+        "dosage": "500mg",
+        "prescriberName": "Dr. Reyes",
+        "prescriberNPI": "5544332211",
+        "prescriberSpecialty": "General / Urgent Care",
+        "prescriberAddress": "441 Clement Street",
+        "previousFills": []
+    },
+
+    "quirk": {
+        "behavior": "In a hurry but not rude. Asks if the pharmacy validates parking.",
+        "shelfPurchase": "None — on the clock"
+    }
+}

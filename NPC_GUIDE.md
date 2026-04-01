@@ -69,6 +69,146 @@ The goal is that a player paying close attention will feel the predecessor's abs
 
 ---
 
+## Dialogue File Structure
+
+Each NPC has four dialogue JSON files. They serve different purposes and follow different rules.
+
+| File | Key | Trigger | Player responses? |
+|---|---|---|---|
+| `npc_customer_XX.json` | *(none)* | Auto-triggers when NPC reaches counter | **No** |
+| `npc_customer_XX_info.json` | `"default"` | Player clicks a button on the NPC info panel | Yes |
+| `npc_customer_XX_dob.json` | `"dob"` | Player clicks a button on the NPC info panel | Yes |
+| `npc_customer_XX_address.json` | `"address"` | Player clicks a button on the NPC info panel | Yes |
+
+### Main dialogue — NPC monologue only
+
+The main file (`npc_customer_XX.json`) is an **NPC-only monologue**. It contains no player response branches. All nodes must have an empty `responses` array, making them terminal — the player sees a [Continue] prompt and the dialogue closes.
+
+This file exists to deliver character texture: the quirk, the reason for the visit, the tone of the person. The player cannot interrogate the NPC here. Investigation happens entirely through the computer screen and info panel buttons.
+
+**Rules:**
+- No `responses` entries in any node
+- One to three nodes maximum — keep it brief
+- The quirk must appear here. This is its only guaranteed delivery point.
+- The NPC's stuff is already on the counter before this triggers. Do not write them "presenting" their ID or prescription — that already happened.
+
+### Verification dialogues — player-initiated
+
+The info, DOB, and address files are triggered by the player clicking buttons on the NPC info panel (after scanning the ID card). These files **may** have player response branches. They are the only place where the player can ask questions.
+
+---
+
+## NPC Profile Files
+
+Every NPC must have a profile JSON file at `Assets/Data/NPCProfiles/npc_customer_XX_profile.json`. This file is the single source of truth for all structured data about an NPC — it is what you fill out to create the Unity ScriptableObject assets and what you check dialogue against for accuracy.
+
+Create this file **before** writing dialogue or creating any Unity assets.
+
+### Schema
+
+```json
+{
+    "npcId": "npc_customer_XX",
+    "npcNumber": 0,
+    "type": "real",
+    "doppelgangerEligible": false,
+
+    "identity": {
+        "fullName": "",
+        "dateOfBirth": "MM/DD/YYYY",
+        "address": "",
+        "idNumber": "",
+        "photoSprite": "",
+        "idCardName": "",
+        "idCardPhotoSprite": ""
+    },
+
+    "prescription": {
+        "medicationName": "",
+        "quantity": 0,
+        "dosage": "",
+        "prescriberName": "",
+        "prescriberNPI": "",
+        "prescriberSpecialty": "",
+        "prescriberAddress": "",
+        "previousFills": []
+    },
+
+    "quirk": {
+        "behavior": "",
+        "shelfPurchase": ""
+    }
+}
+```
+
+**`type` values**: `"real"` · `"standalone_doppelganger"` · `"authored"`
+
+**`photoSprite` / `idCardPhotoSprite`**: Leave empty until art exists. Fill in the sprite asset name when assigned.
+
+**`idCardName` / `idCardPhotoSprite`**: Only needed if the physical ID card should show different data than the computer screen. Leave empty to inherit from `fullName` / `photoSprite`.
+
+---
+
+### For doppelganger-eligible real NPCs
+
+Add a `doppelgangerVersion` block after `quirk`:
+
+```json
+"doppelgangerVersion": {
+    "swappedFields": {
+        "prescriberName": "",
+        "prescriberNPI": "",
+        "prescriberSpecialty": "",
+        "dosage": "",
+        "quantity": 0,
+        "dateOfBirth": "",
+        "address": "",
+        "photoSprite": ""
+    },
+    "discrepancies": [],
+    "quirkDeviations": "",
+    "flagDifficulty": "Medium",
+    "designNote": ""
+}
+```
+
+Only fill in the fields that actually change — leave others empty. `discrepancies` maps directly to the `DoppelgangerProfile.discrepancies` array in Unity (valid values: `PhotoMismatch`, `InvalidNPI`, `NoFillHistory`, `WrongPrescriberSpecialty`, `DoseJump`, `NonStandardQuantity`, `PrescriberOutsideArea`, `WrongDOB`, `WrongAddress`).
+
+---
+
+### For standalone doppelgangers
+
+The `identity` and `prescription` blocks contain the fabricated data. Add a `flags` block instead of `doppelgangerVersion`:
+
+```json
+"flags": {
+    "hardFlags": [],
+    "softTells": [],
+    "flagDifficulty": "Medium",
+    "aftermath": ""
+}
+```
+
+---
+
+### For authored NPCs
+
+Add an `authored` block:
+
+```json
+"authored": {
+    "night": 1,
+    "queuePosition": "3-4",
+    "narrativePurpose": ""
+}
+```
+
+---
+
+See `Assets/Data/NPCProfiles/npc_customer_01_profile.json` for a complete real NPC example.
+
+---
+
 ## Part 1 — Writing a Real NPC
 
 Real NPCs are human. They appear once and are never reused. Their prescription is legitimate. They have a memorable quirk. Some are doppelganger-eligible and have a fixed alternate version written alongside them.

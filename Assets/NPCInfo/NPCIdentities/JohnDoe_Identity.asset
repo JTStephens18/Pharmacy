@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b50830c5ac73b247beeb09286647373, type: 3}
-  m_Name: JohnIdentity
+  m_Name: JohnDoe_Identity
   m_EditorClassIdentifier: 
   fullName: John Doe
   dateOfBirth: 12/25/1977

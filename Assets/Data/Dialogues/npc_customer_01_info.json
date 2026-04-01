@@ -1,109 +1,69 @@
 {
     "dialogueId": "npc_customer_01_info",
-    "speakerName": "Customer",
+    "speakerName": "Derek Solis",
     "startNodeId": "start",
     "nodes": [
         {
             "id": "start",
-            "text": "Oh, you scanned my ID? Is there a problem?",
+            "text": "Something on the prescription?",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "Just verifying your details. Can you confirm your date of birth?",
-                    "nextNodeId": "verify_dob"
+                    "text": "Just a routine verification. Can you confirm the prescription is for you?",
+                    "nextNodeId": "confirm_rx"
                 },
                 {
-                    "text": "I need to check something about your prescription.",
-                    "nextNodeId": "prescription_check"
+                    "text": "Who prescribed this for you?",
+                    "nextNodeId": "prescriber"
                 },
                 {
-                    "text": "No problem at all, just routine procedure.",
-                    "nextNodeId": "routine"
+                    "text": "Actually, we're all set.",
+                    "nextNodeId": "all_set"
                 }
             ]
         },
         {
-            "id": "verify_dob",
-            "text": "Sure, no problem. It should all be on the card there.",
+            "id": "confirm_rx",
+            "text": "Yeah, it's mine. Naproxen — the clinic gave it to me maybe forty minutes ago. I went straight here.",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "Everything matches. You're all set.",
-                    "nextNodeId": "end_verified"
-                },
-                {
-                    "text": "Hmm, there seems to be a discrepancy...",
-                    "nextNodeId": "discrepancy"
+                    "text": "That all checks out. Thank you.",
+                    "nextNodeId": "end_good"
                 }
             ]
         },
         {
-            "id": "prescription_check",
-            "text": "Of course. What do you need to know?",
+            "id": "prescriber",
+            "text": "Dr. Reyes, at the urgent care on the corner. She's good — fast, no nonsense. Probably sees twenty muscle pulls a week.",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "Is this medication for you or someone else?",
-                    "nextNodeId": "who_for"
-                },
-                {
-                    "text": "Are you currently taking any other medications?",
-                    "nextNodeId": "other_meds"
+                    "text": "Alright, everything looks fine.",
+                    "nextNodeId": "end_good"
                 }
             ]
         },
         {
-            "id": "routine",
-            "text": "Ah okay, that makes sense. Take your time!",
+            "id": "all_set",
+            "text": "Good. Appreciate it.",
             "speakerName": "",
             "responses": []
         },
         {
-            "id": "who_for",
-            "text": "It's for me, yes. My doctor prescribed it last week.",
+            "id": "end_good",
+            "text": "Great. And seriously — no parking validation?",
             "speakerName": "",
             "responses": [
                 {
-                    "text": "Perfect, that all checks out. Thank you.",
-                    "nextNodeId": "end_verified"
+                    "text": "Afraid not.",
+                    "nextNodeId": "end_resigned"
                 }
             ]
         },
         {
-            "id": "other_meds",
-            "text": "No, nothing else at the moment. Just this one.",
-            "speakerName": "",
-            "responses": [
-                {
-                    "text": "Good to know. Everything looks fine then.",
-                    "nextNodeId": "end_verified"
-                },
-                {
-                    "text": "Alright, just make sure to read the instructions on the label.",
-                    "nextNodeId": "end_advice"
-                }
-            ]
-        },
-        {
-            "id": "discrepancy",
-            "text": "Really? That's strange... Let me double check. No, I'm pretty sure it's all correct.",
-            "speakerName": "",
-            "responses": [
-                {
-                    "text": "You're right, my mistake. Everything's fine.",
-                    "nextNodeId": "end_verified"
-                }
-            ]
-        },
-        {
-            "id": "end_verified",
-            "text": "Great, thanks for checking! I appreciate the thoroughness.",
-            "speakerName": "",
-            "responses": []
-        },
-        {
-            "id": "end_advice",
-            "text": "Will do, thanks for the reminder!",
+            "id": "end_resigned",
+            "text": "Worth asking twice.",
             "speakerName": "",
             "responses": []
         }
